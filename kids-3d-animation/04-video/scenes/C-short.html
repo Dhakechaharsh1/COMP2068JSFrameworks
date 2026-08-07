@@ -1,0 +1,510 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>C — Zip Gets the Hiccups</title>
+<style>
+  html, body { margin:0; padding:0; background:#000; overflow:hidden; }
+  svg { display:block; }
+  #hictext {
+    font-family: "Fredoka","Baloo 2","DejaVu Sans",sans-serif;
+    font-weight: 800; font-size: 190px; fill: #fff;
+    stroke: #12233A; stroke-width: 22px; paint-order: stroke fill;
+    text-anchor: middle;
+  }
+</style>
+</head>
+<body>
+<svg id="stage" width="1080" height="1920" viewBox="0 0 1080 1920">
+  <defs>
+    <radialGradient id="gloss" cx="35%" cy="28%" r="55%">
+      <stop offset="0%"  stop-color="#fff" stop-opacity=".55"/>
+      <stop offset="60%" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="floorfade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000" stop-opacity=".14"/>
+    </linearGradient>
+  </defs>
+
+  <rect id="bg" x="0" y="0" width="1080" height="1920" fill="#FF3D8B"/>
+  <rect x="0" y="1400" width="1080" height="520" fill="url(#floorfade)"/>
+
+  <!-- contact shadows -->
+  <ellipse id="shZip"  cx="540" cy="1505" rx="120" ry="26" fill="#000" opacity=".16"/>
+  <ellipse id="shBibi" cx="300" cy="1505" rx="105" ry="24" fill="#000" opacity=".16"/>
+  <ellipse id="shMomo" cx="790" cy="1505" rx="115" ry="25" fill="#000" opacity=".16"/>
+
+  <!-- ================= MOMO ================= -->
+  <g id="momo">
+    <g id="momoBody">
+      <!-- ears -->
+      <ellipse cx="-84" cy="-196" rx="42" ry="74" fill="#FFC61E"/>
+      <ellipse cx="-84" cy="-196" rx="21" ry="44" fill="#FFE9B0"/>
+      <ellipse cx="84"  cy="-196" rx="42" ry="74" fill="#FFC61E"/>
+      <ellipse cx="84"  cy="-196" rx="21" ry="44" fill="#FFE9B0"/>
+      <!-- body, then head on top of it -->
+      <ellipse cx="0" cy="78"  rx="100" ry="96"  fill="#FFD24D"/>
+      <ellipse cx="0" cy="-88" rx="116" ry="108" fill="#FFC61E"/>
+      <!-- chest star, on the fur above the bib -->
+      <path id="momoStar" d="M0,-52 L15,-16 L54,-16 L23,8 L35,45 L0,22 L-35,45 L-23,8 L-54,-16 L-15,-16 Z"
+            fill="#fff" transform="translate(0,40) scale(.5)"/>
+      <!-- overalls: bib low on the body, right strap up, LEFT strap unbuckled -->
+      <path d="M-88,86 h176 v50 a88,88 0 0 1 -176,0 z" fill="#1FA5A0"/>
+      <rect x="30" y="14" width="24" height="78" rx="11" fill="#1FA5A0"/>
+      <rect x="-56" y="34" width="24" height="58" rx="11" fill="#1FA5A0"
+            transform="rotate(-28 -44 63)"/>
+      <!-- face -->
+      <g id="momoEyes">
+        <ellipse cx="-46" cy="-108" rx="30" ry="34" fill="#fff"/>
+        <ellipse cx="46"  cy="-108" rx="30" ry="34" fill="#fff"/>
+        <circle cx="-42" cy="-104" r="15" fill="#2B1B0E"/>
+        <circle cx="50"  cy="-104" r="15" fill="#2B1B0E"/>
+        <circle cx="-49" cy="-113" r="6" fill="#fff"/>
+        <circle cx="43"  cy="-113" r="6" fill="#fff"/>
+      </g>
+      <g id="momoDaze" opacity="0">
+        <path d="M-62,-108 a18,18 0 1 1 -14,-14 a10,10 0 1 0 8,8" fill="none" stroke="#2B1B0E" stroke-width="8" stroke-linecap="round"/>
+        <path d="M30,-108 a18,18 0 1 1 -14,-14 a10,10 0 1 0 8,8" fill="none" stroke="#2B1B0E" stroke-width="8" stroke-linecap="round"/>
+      </g>
+      <ellipse cx="0" cy="-62" rx="13" ry="10" fill="#4A2E14"/>
+      <ellipse id="momoMouth" cx="0" cy="-30" rx="16" ry="10" fill="#8A3B2E"/>
+      <ellipse cx="-10" cy="-140" rx="82" ry="54" fill="url(#gloss)"/>
+    </g>
+  </g>
+
+  <!-- ================= BIBI ================= -->
+  <g id="bibi">
+    <g id="bibiBody">
+      <!-- legs -->
+      <rect x="-58" y="86" width="40" height="46" rx="18" fill="#6FA8CE"/>
+      <rect x="18"  y="86" width="40" height="46" rx="18" fill="#6FA8CE"/>
+      <!-- shell dome -->
+      <path d="M-128,44 a128,116 0 0 1 256,0 z" fill="#7FB6D9"/>
+      <ellipse cx="-52" cy="-14" rx="34" ry="20" fill="#EAF4FB"/>
+      <ellipse cx="18"  cy="-40" rx="42" ry="24" fill="#EAF4FB"/>
+      <ellipse cx="72"  cy="0"   rx="30" ry="18" fill="#EAF4FB"/>
+      <!-- body/head -->
+      <ellipse cx="0" cy="52" rx="104" ry="64" fill="#9CC9E6"/>
+      <!-- scarf -->
+      <path d="M-96,66 q96,34 192,0 v30 q-96,34 -192,0 z" fill="#F2B21C"/>
+      <!-- face -->
+      <g id="bibiEyes">
+        <circle cx="-40" cy="34" r="26" fill="#fff"/>
+        <circle cx="40"  cy="34" r="26" fill="#fff"/>
+        <circle id="bibiPupL" cx="-38" cy="36" r="12" fill="#16273A"/>
+        <circle id="bibiPupR" cx="42"  cy="36" r="12" fill="#16273A"/>
+      </g>
+      <!-- glasses -->
+      <g id="bibiGlasses">
+        <circle cx="-40" cy="34" r="34" fill="none" stroke="#E23B2E" stroke-width="9"/>
+        <circle cx="40"  cy="34" r="34" fill="none" stroke="#E23B2E" stroke-width="9"/>
+        <path d="M-6,34 h12" stroke="#E23B2E" stroke-width="9" stroke-linecap="round"/>
+      </g>
+      <path id="bibiMouth" d="M-20,80 q20,6 40,0" fill="none" stroke="#16273A" stroke-width="7" stroke-linecap="round"/>
+      <!-- arms -->
+      <ellipse id="bibiArmL" cx="-104" cy="56" rx="26" ry="20" fill="#9CC9E6"/>
+      <ellipse id="bibiArmR" cx="104"  cy="56" rx="26" ry="20" fill="#9CC9E6"/>
+      <ellipse cx="-24" cy="-30" rx="76" ry="46" fill="url(#gloss)"/>
+    </g>
+    <!-- water drips when soaked -->
+    <g id="bibiDrips" opacity="0">
+      <ellipse cx="-70" cy="104" rx="7" ry="14" fill="#BFE6FF"/>
+      <ellipse cx="6"   cy="118" rx="7" ry="14" fill="#BFE6FF"/>
+      <ellipse cx="76"  cy="104" rx="7" ry="14" fill="#BFE6FF"/>
+    </g>
+  </g>
+
+  <!-- flying glasses (Bibi's tag hiccup) -->
+  <g id="flyGlasses" opacity="0">
+    <circle cx="-40" cy="0" r="34" fill="none" stroke="#E23B2E" stroke-width="9"/>
+    <circle cx="40"  cy="0" r="34" fill="none" stroke="#E23B2E" stroke-width="9"/>
+    <path d="M-6,0 h12" stroke="#E23B2E" stroke-width="9" stroke-linecap="round"/>
+  </g>
+
+  <!-- ================= GLASS OF WATER ================= -->
+  <g id="glass" opacity="0">
+    <path d="M-46,-70 h92 l-12,132 h-68 z" fill="#DFF3FF" opacity=".55"/>
+    <path d="M-38,-16 h76 l-9,74 h-58 z" fill="#7FD4FF"/>
+    <path d="M-46,-70 h92" stroke="#fff" stroke-width="7" stroke-linecap="round"/>
+  </g>
+
+  <!-- ================= ZIP ================= -->
+  <g id="zip">
+    <g id="zipBody">
+      <!-- tail feathers -->
+      <g id="zipTail">
+        <ellipse cx="-136" cy="0"  rx="60" ry="15" fill="#FF9C3D"/>
+        <ellipse cx="-136" cy="0"  rx="60" ry="15" fill="#FF8A1E" transform="rotate(38 -80 0)"/>
+        <ellipse cx="-136" cy="0"  rx="60" ry="15" fill="#FFB05C" transform="rotate(-38 -80 0)"/>
+      </g>
+      <!-- wings -->
+      <ellipse id="zipWingL" cx="-104" cy="18" rx="42" ry="22" fill="#FF9C3D" opacity=".75"/>
+      <ellipse id="zipWingR" cx="104"  cy="18" rx="42" ry="22" fill="#FF9C3D" opacity=".75"/>
+      <!-- body -->
+      <circle cx="0" cy="0" r="112" fill="#FF6A1E"/>
+      <ellipse cx="0" cy="42" rx="78" ry="62" fill="#FF8A3D"/>
+      <!-- eyes -->
+      <g id="zipEyes">
+        <circle cx="-40" cy="-26" r="44" fill="#fff"/>
+        <circle cx="40"  cy="-26" r="44" fill="#fff"/>
+        <circle id="zipPupL" cx="-38" cy="-24" r="11" fill="#141414"/>
+        <circle id="zipPupR" cx="42"  cy="-24" r="11" fill="#141414"/>
+      </g>
+      <g id="zipDaze" opacity="0">
+        <path d="M-56,-26 a20,20 0 1 1 -16,-16 a11,11 0 1 0 9,9" fill="none" stroke="#141414" stroke-width="9" stroke-linecap="round"/>
+        <path d="M24,-26 a20,20 0 1 1 -16,-16 a11,11 0 1 0 9,9" fill="none" stroke="#141414" stroke-width="9" stroke-linecap="round"/>
+      </g>
+      <!-- beak -->
+      <path id="zipBeak" d="M0,14 L40,34 L0,54 Z" fill="#9BE24A"/>
+      <ellipse cx="-26" cy="-52" rx="72" ry="44" fill="url(#gloss)"/>
+    </g>
+  </g>
+
+  <!-- water spray -->
+  <g id="spray" opacity="0"></g>
+  <!-- impact stars -->
+  <g id="stars" opacity="0">
+    <path d="M0,-46 L11,-12 L46,-12 L18,8 L28,44 L0,22 L-28,44 L-18,8 L-46,-12 L-11,-12 Z" fill="#FFF06A" stroke="#12233A" stroke-width="7"/>
+  </g>
+  <!-- dust puffs -->
+  <g id="puffs" opacity="0">
+    <circle cx="-70" cy="0" r="26" fill="#fff" opacity=".65"/>
+    <circle cx="0"   cy="10" r="34" fill="#fff" opacity=".55"/>
+    <circle cx="70"  cy="0" r="26" fill="#fff" opacity=".65"/>
+  </g>
+
+  <text id="hictext" x="540" y="330" opacity="0">HIC!</text>
+</svg>
+
+<script>
+/* ============================================================================
+   "Zip Gets the Hiccups" — 35s, 1080x1920, Pop Vinyl style.
+
+   Deterministic: every visual property is a pure function of t (seconds).
+   The renderer calls window.setTime(t) then screenshots. No CSS animation,
+   no requestAnimationFrame — so the output is identical on every run and the
+   frame timing cannot drift.
+   ========================================================================= */
+
+const DURATION = 35;
+const $ = id => document.getElementById(id);
+
+/* ---------- stage ----------
+   9:16 composition: Zip hovers high, the standing characters sit along the
+   bottom. Characters are drawn at a base size then scaled up here, so the
+   art stays editable at sane coordinates. */
+const FLOOR = 1720;          // where contact shadows live
+const ZS = 2.75;             // Zip      — ~620px across, ~32% of frame height
+const BS = 2.25;             // Bibi
+const MS = 1.95;             // Momo
+
+/* ---------- maths ---------- */
+const clamp = (v,a,b) => v<a?a:v>b?b:v;
+const lerp  = (a,b,u) => a+(b-a)*u;
+/** progress through [t0,t1], clamped to 0..1 */
+const seg   = (t,t0,t1) => clamp((t-t0)/(t1-t0), 0, 1);
+const easeOut  = u => 1-Math.pow(1-u,3);
+const easeIn   = u => u*u*u;
+const easeBoth = u => u<.5 ? 4*u*u*u : 1-Math.pow(-2*u+2,3)/2;
+/** 0 -> 1 -> 0 */
+const pulse = u => Math.sin(Math.PI*clamp(u,0,1));
+
+const T = (x,y,s=1,sy=s,rot=0) =>
+  `translate(${x},${y}) rotate(${rot}) scale(${s},${sy})`;
+
+/* ---------- timeline ---------- */
+const B = {
+  calm:[0,1.2], hic1:[1.2,2.0], empty1:[2.0,3.0], stare:[3.0,5.0], wobble:[5.0,8.0],
+  drink:[8.0,11.0], spray:[11.0,13.0], soaked:[13.0,14.0],
+  pat:[14.0,16.0], launch:[16.0,16.5], empty2:[16.5,18.5], drop:[18.5,20.0],
+  sneak:[20.0,23.0], butt:[23.0,25.0], down:[25.0,26.0], sync:[26.0,29.0],
+  facepalm:[29.0,31.0], bibihic:[31.0,33.0], freeze:[33.0,35.0]
+};
+
+/* backdrop cuts — hard, on the beat */
+function backdrop(t){
+  if (t < 8)  return '#FF3D8B';   // hot pink
+  if (t < 14) return '#8BE23A';   // lime
+  if (t < 20) return '#FF8A1E';   // tangerine
+  return '#12C9C0';               // electric teal
+}
+
+/* the four-beat hiccup figure, returned as a 0..1 intensity:
+   anticipation (3f) → snap (2f) → overshoot (4f) → settle (6f) */
+function hicAmount(t, t0){
+  const d = t - t0;
+  if (d < -0.14 || d > 0.55) return 0;
+  if (d < 0)    return easeIn((d+0.14)/0.14) * 0.35;
+  if (d < 0.09) return lerp(0.35, 1, d/0.09);
+  if (d < 0.28) return lerp(1, 0.25, easeOut((d-0.09)/0.19));
+  return lerp(0.25, 0, easeOut((d-0.28)/0.27));
+}
+
+/** contact shadow tightens and darkens as a character nears the floor */
+function shadow(el, x, y, baseR, on){
+  const h = clamp((FLOOR - y) / 1500, 0, 1);
+  el.setAttribute('cx', x);
+  el.setAttribute('rx', baseR * lerp(1, 0.4, h));
+  el.setAttribute('ry', baseR * 0.22 * lerp(1, 0.5, h));
+  el.setAttribute('opacity', on ? lerp(0.22, 0.05, h) : 0);
+}
+
+/* ---------- the scene ---------- */
+function setTime(t){
+  t = clamp(t, 0, DURATION);
+  $('bg').setAttribute('fill', backdrop(t));
+
+  /* ============ ZIP ============ */
+  const HOVER_Y = 720;         // his resting altitude
+  const GROUND_Y = 1560;       // where he lands after the rocket
+
+  let zx = 540, zy = HOVER_Y, zs = 1, zsy = 1, zrot = 0, zop = 1;
+  let zDaze = 0;
+
+  const h1 = hicAmount(t, B.hic1[0]);
+  const h2 = hicAmount(t, B.spray[0]);
+  const h3 = hicAmount(t, B.launch[0]);
+  const h4 = hicAmount(t, B.butt[0]);
+  const hover = Math.sin(t*3.3)*18;
+
+  if (t < B.hic1[0]) {                              // calm + tiny wind-up
+    zy = HOVER_Y + hover;
+    const w = seg(t, 0.85, 1.2);
+    zs = 1 + w*0.06; zsy = 1 - w*0.06;
+  } else if (t < B.empty1[0]) {                     // HIC → blasts off right
+    const u = seg(t, B.hic1[0]+0.06, B.hic1[1]);
+    zx = 540 + easeIn(u)*1300;
+    zy = HOVER_Y - u*160;
+    zrot = u*160;
+  } else if (t < B.wobble[0]) {                     // off screen
+    zop = 0;
+  } else if (t < B.drink[0]) {                      // wobbles back in, dizzy
+    const u = seg(t, B.wobble[0], B.wobble[0]+1.6);
+    zx = lerp(1700, 560, easeOut(u));
+    zy = HOVER_Y + Math.sin(t*7)*52 + hover*.4;
+    zrot = Math.sin(t*5.5)*16;
+    zDaze = 1 - seg(t, B.wobble[0]+1.4, B.wobble[1]);
+  } else if (t < B.spray[0]) {                      // drinking
+    zx = 600; zy = HOVER_Y + hover*.5;
+    zrot = -8 - pulse(seg(t, 8.5, 10.6))*16;        // tips the glass back
+  } else if (t < B.pat[0]) {                        // HIC → spray, then soaked beat
+    zx = 600; zy = HOVER_Y + hover*.5;
+    zrot = lerp(-8, 6, seg(t, B.spray[0], B.spray[0]+.2));
+  } else if (t < B.launch[0]) {                     // gets patted
+    zx = 600; zy = HOVER_Y + hover;
+  } else if (t < B.empty2[0]) {                     // HIC → rockets up
+    const u = seg(t, B.launch[0]+0.05, B.launch[1]);
+    zx = 600; zy = HOVER_Y - easeIn(u)*1600;
+  } else if (t < B.drop[0]) {                       // gone — the empty frame
+    zop = 0;
+  } else if (t < B.sneak[0]) {                      // falls back, lands upside down
+    const u = seg(t, B.drop[0], B.drop[0]+0.7);
+    zx = 600; zy = lerp(-500, GROUND_Y, easeIn(u));
+    zrot = lerp(0, 190, easeOut(seg(t, B.drop[0]+0.3, B.drop[1])));
+    if (u >= 1) zy = GROUND_Y - pulse(seg(t, B.drop[0]+0.7, B.drop[0]+1.05))*70;
+    zDaze = seg(t, B.drop[0]+0.6, B.drop[0]+0.9);
+  } else if (t < B.sync[0]) {                       // rights himself for the headbutt
+    const u = seg(t, B.sneak[0], B.sneak[0]+0.7);
+    zx = 600; zy = lerp(GROUND_Y, 800, easeOut(u)); zrot = lerp(190, 360, easeOut(u));
+    zDaze = 1-u;
+    if (t >= B.butt[0]) {                           // knocked back by his own hiccup
+      const k = seg(t, B.butt[0], B.butt[0]+0.18);
+      zx = 600 - easeOut(k)*90;
+      zy = 800 - easeOut(k)*40 + hover*.3;
+    } else { zy += hover*.5; }
+  } else {                                          // sync bouncing, then freeze
+    zx = 480;
+    const bounce = t < B.facepalm[0] ? Math.abs(Math.sin((t-B.sync[0])*Math.PI*1.6)) : 0;
+    zy = 680 - bounce*150 + hover*.3;
+  }
+
+  // hiccup squash/stretch on top of whatever pose we're in
+  const syncBounce = (t>=B.sync[0] && t<B.facepalm[0])
+    ? Math.abs(Math.sin((t-B.sync[0])*Math.PI*1.6)) : 0;
+  const zh = Math.max(h1, h2, h3, h4, syncBounce*0.75, t>=B.freeze[0] ? 1 : 0);
+  zsy *= 1 + zh*0.42;
+  zs  *= 1 - zh*0.22;
+
+  // he turns to face Bibi (screen left) for the drink and the spray
+  const zface = (t >= B.drink[0]-0.4 && t < B.pat[0]) ? -1 : 1;
+  $('zip').setAttribute('transform', T(zx, zy, zs*ZS*zface, zsy*ZS, zrot));
+  $('zip').setAttribute('opacity', zop);
+  $('zipEyes').setAttribute('transform', `scale(${1 + zh*0.20})`);
+  $('zipEyes').setAttribute('opacity', 1-zDaze);
+  $('zipDaze').setAttribute('opacity', zDaze);
+  $('zipBeak').setAttribute('transform', `scale(1,${1 + zh*0.55})`);
+  // wings beat too fast to see — flicker them per frame
+  const wf = 0.45 + 0.4*Math.abs(Math.sin(t*40));
+  $('zipWingL').setAttribute('opacity', wf);
+  $('zipWingR').setAttribute('opacity', wf);
+  $('zipTail').setAttribute('transform', `rotate(${Math.sin(t*26)*22})`);
+  shadow($('shZip'), zx, zy, 150, zop === 1);
+
+  /* ============ BIBI ============ */
+  const BIBI_Y = FLOOR - 132*BS;   // feet on the floor
+
+  let bx = 300, by = BIBI_Y, bs = 1, bsy = 1, brot = 0, bop = 0;
+  let bGlasses = 1, bDrips = 0, bArmL = 0, bMouth = 'M-20,80 q20,6 40,0';
+
+  const h5 = hicAmount(t, B.bibihic[0]);
+  if (t >= B.stare[0]) bop = 1;
+
+  if (t < B.drink[0]) {                             // deadpan stare
+    bx = 300; bMouth = 'M-22,82 h44';
+  } else if (t < B.spray[0]) {                      // holds out the glass
+    bx = 300;
+  } else if (t < B.pat[0]) {                        // soaked
+    bx = 300;
+    bDrips = seg(t, B.spray[0]+0.25, B.spray[0]+0.5);
+    brot = pulse(seg(t, B.spray[0], B.spray[0]+0.45))*8;
+    bMouth = 'M-22,84 h44';
+  } else if (t < B.sneak[0]) {                      // pats, then looks up at nothing
+    bx = 340;
+    bArmL = pulse(seg(t, B.pat[0]+0.2, B.pat[0]+1.4));
+    bDrips = clamp(1 - seg(t, B.pat[0], B.pat[0]+1.2), 0, 1);
+    if (t >= B.launch[0]) bx = 300;
+  } else if (t < B.bibihic[0]) {
+    bx = 250;
+    if (t >= B.facepalm[0]) {                       // paw drags down the face
+      bArmL = seg(t, B.facepalm[0], B.facepalm[0]+0.9);
+      bMouth = 'M-20,86 q20,-8 40,0';
+    }
+  } else {                                          // her own hiccup — the tag
+    bx = 250;
+    bGlasses = 0;
+    bMouth = 'M-24,80 a24,20 0 1 0 48,0 a24,20 0 1 0 -48,0';
+  }
+
+  const bh = Math.max(h5, t>=B.freeze[0] ? 1 : 0);
+  bsy *= 1 + bh*0.38; bs *= 1 - bh*0.2;
+  by -= bh*40;                                      // she leaves the ground a little
+
+  $('bibi').setAttribute('transform', T(bx, by, bs*BS, bsy*BS, brot));
+  $('bibi').setAttribute('opacity', bop);
+  $('bibiGlasses').setAttribute('opacity', bGlasses);
+  $('bibiDrips').setAttribute('opacity', bDrips);
+  $('bibiEyes').setAttribute('transform', `scale(${1 + bh*0.20})`);
+  $('bibiMouth').setAttribute('d', bMouth);
+  $('bibiArmL').setAttribute('transform', `translate(${bArmL*26},${-bArmL*46})`);
+  shadow($('shBibi'), bx, FLOOR - bh*40, 130, bop === 1);
+
+  // the glasses fly off on her tag hiccup
+  if (t >= B.bibihic[0]) {
+    const u = seg(t, B.bibihic[0], B.bibihic[0]+0.9);
+    $('flyGlasses').setAttribute('opacity', 1);
+    $('flyGlasses').setAttribute('transform',
+      T(bx - easeOut(u)*150, by + 34*BS - easeOut(u)*560, BS*0.85, BS*0.85, u*220));
+  } else {
+    $('flyGlasses').setAttribute('opacity', 0);
+  }
+
+  /* ============ MOMO ============ */
+  const MOMO_Y = FLOOR - 174*MS;
+
+  let mx = 820, my = MOMO_Y, ms = 1, msy = 1, mrot = 0, mop = 0, mDaze = 0;
+  if (t >= B.sneak[0]) {
+    mop = 1;
+    if (t < B.butt[0]) {                            // tiptoes in from the right
+      const u = seg(t, B.sneak[0], B.sneak[1]);
+      mx = lerp(1300, 830, easeBoth(u));
+      my = MOMO_Y - Math.abs(Math.sin(u*Math.PI*6))*26;
+    } else if (t < B.down[0]) {                     // knocked flat
+      const u = seg(t, B.butt[0], B.butt[0]+0.3);
+      // lying down he is ~870px wide, so he has to land centred-left with his
+      // head to the right, clear of Bibi — otherwise his face is behind her
+      mx = lerp(830, 470, easeOut(u));
+      my = lerp(MOMO_Y, FLOOR-120, easeOut(u));
+      mrot = easeOut(u)*88;
+      mDaze = u;
+    } else if (t < B.sync[0]) {
+      mx = 470; my = FLOOR-120; mrot = 88; mDaze = 1;
+    } else {                                        // up and hiccuping in sync
+      const u = seg(t, B.sync[0], B.sync[0]+0.5);
+      mx = lerp(470, 855, easeOut(u));
+      my = lerp(FLOOR-120, MOMO_Y, easeOut(u));
+      mrot = lerp(88, 0, easeOut(u));
+      mDaze = 1-u;
+      my -= syncBounce*125;
+    }
+  }
+  const mh = Math.max(syncBounce*0.8, t>=B.freeze[0] ? 1 : 0);
+  msy *= 1 + mh*0.4; ms *= 1 - mh*0.2;
+
+  $('momo').setAttribute('transform', T(mx, my, ms*MS, msy*MS, mrot));
+  $('momo').setAttribute('opacity', mop);
+  $('momoEyes').setAttribute('opacity', 1-mDaze);
+  $('momoDaze').setAttribute('opacity', mDaze);
+  $('momoEyes').setAttribute('transform', `scale(${1 + mh*0.20})`);
+  $('momoMouth').setAttribute('ry', 10 + mh*20);
+  shadow($('shMomo'), mx, my + 174*MS, 140, mop === 1);
+
+  /* ============ PROPS ============ */
+  // glass of water — Bibi passes it up to Zip
+  if (t >= B.drink[0]-0.4 && t < B.spray[0]+0.3) {
+    const gu = seg(t, B.drink[0]-0.4, B.drink[0]+0.5);
+    $('glass').setAttribute('opacity', 1);
+    $('glass').setAttribute('transform',
+      T(lerp(400, 505, easeOut(gu)), lerp(1330, 845, easeOut(gu)), 1.7, 1.7,
+        -pulse(seg(t, 8.5, 10.6))*44));
+  } else {
+    $('glass').setAttribute('opacity', 0);
+  }
+
+  // water spray arc, fired left across Bibi
+  const sp = $('spray');
+  if (t >= B.spray[0] && t < B.spray[0]+0.9) {
+    const u = seg(t, B.spray[0], B.spray[0]+0.9);
+    sp.setAttribute('opacity', 1 - easeIn(u)*0.4);
+    // a fan, not a stream: droplets ride a ballistic arc from the beak down to
+    // Bibi, scattered perpendicular to it by an amount that grows with distance
+    let d = '';
+    const N = 52;
+    for (let i = 0; i < N; i++) {
+      const k = i/(N-1);
+      const reach = easeOut(u) * (1 - k*0.18);
+      // deterministic scatter — same every render, no Math.random
+      const n1 = Math.sin(i*127.1)*43758.5453;
+      const n2 = Math.sin(i*311.7)*24634.6345;
+      const j1 = (n1 - Math.floor(n1)) - 0.5;
+      const j2 = (n2 - Math.floor(n2)) - 0.5;
+      const spread = 55 + k * 330;
+      const px = 455 - k*265*reach + j1*spread;
+      const py = 820 + (-Math.sin(k*Math.PI)*140 + k*k*590) * reach + j2*spread*0.8;
+      const r  = lerp(30, 17, k) * (0.7 + (n1 - Math.floor(n1))*0.7);
+      d += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${r.toFixed(1)}" fill="#BFE6FF" opacity="${(0.95-k*0.28).toFixed(2)}"/>`;
+    }
+    sp.innerHTML = d;
+  } else {
+    sp.setAttribute('opacity', 0);
+  }
+
+  // impact stars on the headbutt
+  if (t >= B.butt[0] && t < B.butt[0]+0.45) {
+    const u = seg(t, B.butt[0], B.butt[0]+0.45);
+    $('stars').setAttribute('opacity', 1-u);
+    $('stars').setAttribute('transform', T(720, 1000, 1.6+u*1.4, 1.6+u*1.4, u*70));
+  } else {
+    $('stars').setAttribute('opacity', 0);
+  }
+
+  // dust puffs on landing and under the sync bounces
+  let puffOp = 0, puffX = 600, puffS = 1.4;
+  const land = seg(t, B.drop[0]+0.68, B.drop[0]+1.1);
+  if (land > 0 && land < 1) { puffOp = 1-land; puffS = 1.4+land*1.2; }
+  if (t >= B.sync[0] && t < B.facepalm[0] && syncBounce < 0.22) {
+    puffOp = (0.22-syncBounce)/0.22*0.8; puffS = 1.4+syncBounce*1.5;
+  }
+  $('puffs').setAttribute('opacity', puffOp);
+  $('puffs').setAttribute('transform', T(puffX, FLOOR, puffS, puffS*0.6));
+
+  // "HIC." on the freeze
+  $('hictext').setAttribute('opacity', t >= B.freeze[0]+0.06 ? 1 : 0);
+}
+
+window.setTime = setTime;
+window.DURATION = DURATION;
+setTime(0);
+</script>
+</body>
+</html>

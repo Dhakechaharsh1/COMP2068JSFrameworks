@@ -89,8 +89,25 @@ and prompt scaffolds already filled in.
 02-episodes/   Day-by-day finished packets. day-001 is written and ready to produce.
 03-thumbnails/ templates/  three HTML thumbnail layouts (16:9 ×2, 9:16 ×1)
                rendered/   output PNGs — guide, overlay and 120px blur test
-tools/         new-day.js scaffolder, render-thumbnails.js
+04-video/      scenes/     code-driven animation scenes
+               rendered/   **playable video files**
+tools/         new-day.js, render-thumbnails.js, render-video.js
 ```
+
+**Playable video is in [`04-video/`](04-video/).** Two of the three Day 001 videos are
+rendered and watchable right now — the Short and the poem, complete and timed:
+
+```bash
+cd kids-3d-animation && npm run video:short   # 0:35, 1080x1920
+                        npm run video:poem    # 2:35, 1920x1080
+```
+
+Read [`04-video/README.md`](04-video/README.md) before you judge them: they are real,
+finished, uploadable animation, but they are **vector/2.5D built in SVG and JavaScript,
+not the Nano Banana + Veo 3D renders this system specifies**, and they are silent. Their
+main job is to be the animatic — every beat and hold is already timed, so when you
+generate the 3D shots you are matching a rhythm that has been proven rather than
+discovering it in the edit.
 
 **Rendering the thumbnail templates** (Chromium is already installed):
 

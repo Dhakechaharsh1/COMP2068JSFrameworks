@@ -5,7 +5,11 @@
   "description": "Production system for a daily 3D kids animation channel — poem, story and short, built around Suno and Nano Banana.",
   "scripts": {
     "thumbs": "node tools/render-thumbnails.js",
-    "new-day": "node tools/new-day.js"
+    "new-day": "node tools/new-day.js",
+    "video": "node tools/render-video.js",
+    "video:short": "node tools/render-video.js C-short",
+    "video:poem": "node tools/render-video.js A-poem",
+    "video:preview": "node tools/render-video.js C-short --scale 0.35 --fps 12"
   },
   "devDependencies": {
     "playwright": "^1.56.1"
