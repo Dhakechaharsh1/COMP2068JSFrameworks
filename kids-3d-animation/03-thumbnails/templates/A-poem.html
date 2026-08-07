@@ -1,0 +1,95 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Thumbnail A — Poem</title>
+<style>
+  /* Layout A — "soft centre"  ·  1280 x 720
+     ?mode=guide    safe zones + placeholder background, for composing against
+     ?mode=overlay  transparent, typography only — composite over your render
+     &bg=<path>     use your own image as the background                        */
+
+  html, body { margin: 0; padding: 0; }
+  body {
+    width: 1280px; height: 720px; position: relative; overflow: hidden;
+    font-family: "Baloo 2", "Fredoka", "Nunito", "DejaVu Sans", sans-serif;
+  }
+
+  #bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+  body.guide #bg {
+    background-image:
+      radial-gradient(ellipse 70% 55% at 50% 68%, #6B5A9E 0%, transparent 60%),
+      linear-gradient(175deg, #1B1638 0%, #2B2350 45%, #6E4A5C 80%, #B87D74 100%);
+  }
+
+  /* --- typography (exports in both modes) -------------------------------- */
+  .num {
+    position: absolute; left: 104px; top: 62px;
+    font-size: 124px; font-weight: 800; line-height: 1; color: #FFF6E0;
+    -webkit-text-stroke: 9px #2B2350; paint-order: stroke fill;
+    text-shadow: 0 6px 12px rgba(0,0,0,.45);
+    transform: rotate(-7deg);
+  }
+  /* single line, inside the 1100x620 safe box, clear of the bottom 15% */
+  .title {
+    position: absolute; left: 0; right: 0; top: 502px; text-align: center;
+    font-size: 66px; font-weight: 800; letter-spacing: 2px; line-height: 1.02;
+    white-space: nowrap; color: #FFF6E0;
+    -webkit-text-stroke: 8px #2B2350; paint-order: stroke fill;
+    text-shadow: 0 6px 12px rgba(0,0,0,.45);
+  }
+
+  /* --- guide chrome (hidden in the overlay export) ------------------------ */
+  .g { display: none; }
+  body.guide .g { display: block; }
+
+  .safe    { position: absolute; left: 90px; top: 50px; width: 1100px; height: 620px;
+             border: 2px dashed rgba(80,255,180,.85); }
+  .dead    { position: absolute; right: 0; bottom: 0; width: 210px; height: 84px;
+             background: rgba(255,60,60,.30); border: 2px solid rgba(255,60,60,.9); }
+  .barzone { position: absolute; left: 0; right: 0; bottom: 0; height: 108px;
+             background: repeating-linear-gradient(45deg, rgba(255,160,0,.16) 0 10px, transparent 10px 20px);
+             border-top: 2px solid rgba(255,160,0,.75); }
+  .lbl     { position: absolute; font: 600 17px/1 "DejaVu Sans", sans-serif; color: #fff;
+             background: rgba(0,0,0,.62); padding: 5px 9px; border-radius: 4px; }
+  .subject { position: absolute; left: 50%; top: 300px; transform: translate(-50%,-50%);
+             width: 400px; height: 400px; border-radius: 50%;
+             border: 3px dashed rgba(255,255,255,.55);
+             display: flex; align-items: center; justify-content: center;
+             font: 600 22px/1.5 "DejaVu Sans", sans-serif; color: rgba(255,255,255,.78);
+             text-align: center; }
+  .fly     { position: absolute; width: 26px; height: 26px; border-radius: 50%;
+             background: radial-gradient(circle, #FFE9A8 0%, #FFB84D 45%, rgba(255,150,40,0) 72%);
+             box-shadow: 0 0 26px 12px rgba(255,180,70,.55); }
+</style>
+</head>
+<body>
+  <div id="bg"></div>
+
+  <!-- five countable fireflies · guide only, replace with your render -->
+  <div class="g fly" style="left:300px; top:150px"></div>
+  <div class="g fly" style="left:452px; top:96px"></div>
+  <div class="g fly" style="left:628px; top:74px"></div>
+  <div class="g fly" style="left:804px; top:100px"></div>
+  <div class="g fly" style="left:952px; top:158px"></div>
+
+  <div class="g subject">MOMO<br>face ≈ 40% of frame height<br>eyes OPEN, looking up</div>
+
+  <div class="num">5</div>
+  <div class="title">FIVE SLEEPY FIREFLIES</div>
+
+  <div class="g safe"></div>
+  <div class="g lbl" style="right:100px; top:56px">safe zone 1100 × 620</div>
+  <div class="g dead"></div>
+  <div class="g lbl" style="right:14px; bottom:92px">duration stamp — keep empty</div>
+  <div class="g barzone"></div>
+  <div class="g lbl" style="left:14px; bottom:14px">bottom 15% — progress bar / mobile title overlay</div>
+
+<script>
+  const p = new URLSearchParams(location.search);
+  document.body.className = p.get('mode') === 'overlay' ? 'overlay' : 'guide';
+  const bg = p.get('bg');
+  if (bg) document.getElementById('bg').style.backgroundImage = 'url("' + bg + '")';
+</script>
+</body>
+</html>

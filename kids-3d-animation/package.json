@@ -1,0 +1,13 @@
+{
+  "name": "puddleberry-hollow-pipeline",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Production system for a daily 3D kids animation channel — poem, story and short, built around Suno and Nano Banana.",
+  "scripts": {
+    "thumbs": "node tools/render-thumbnails.js",
+    "new-day": "node tools/new-day.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.1"
+  }
+}
