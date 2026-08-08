@@ -111,7 +111,7 @@ cd kids-3d-animation && npm run video:short   # audio + render, ~85s
 Read [`04-video/README.md`](04-video/README.md) before you judge them: they are real,
 finished, uploadable animation, but they are **vector/2.5D built in SVG and JavaScript,
 not the Nano Banana + Veo 3D renders this system specifies**. The soundtracks are
-synthesised in code — the poem's lyrics are actually **sung** by `tools/singer.js`. A temp vocal, not Suno; drop a Suno WAV
+synthesised in code — the poem's lyrics are actually **sung** by `tools/singer.js`. A synthetic temp vocal (espeak phonemes sung by MBROLA), not Suno; drop a Suno WAV
 into `04-video/audio/` and re-render to replace it.
 
 Their main job is to be the animatic — every beat and hold is already timed, so when you

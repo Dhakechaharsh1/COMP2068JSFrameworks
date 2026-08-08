@@ -1,29 +1,26 @@
 /**
- * singer.js — turn words into sung notes using espeak-ng as the voice source.
+ * singer.js — sung words, synthesised in code.
  *
- * There is no singing-synthesis engine here and no neural model. The trick is
- * old and simple:
+ * MBROLA backend. espeak-ng emits a phoneme script — phoneme, duration, and
+ * pitch targets — which MBROLA renders from recorded diphones of a real
+ * speaker. Because we author the durations and the pitch ourselves, each note
+ * is synthesised AT pitch: there is no resampling, so no formant shift and no
+ * chipmunk. MBROLA's internal PSOLA keeps the timbre steady across the range.
  *
- *   1. espeak-ng speaks the word on a MONOTONE. This matters: espeak's normal
- *      intonation falls ~240 cents across a word, so a two-syllable word sung
- *      as one note sags badly on its second syllable. tools/espeak/flatsing is
- *      an f5 variant with `pitch 190 190` — equal base and range, i.e. no
- *      contour — which brings that spread down to about 10 cents.
- *   2. Measure its actual F0 by autocorrelation.
- *   3. Resample so that F0 lands exactly on the melody note. Resampling drags
- *      the formants along with it, which is why we drive espeak at ~350 Hz —
- *      close to the middle of this melody, so the shift stays small and the
- *      voice reads as a child rather than a chipmunk.
- *   4. The word is now the wrong *length*, so splice extra pitch-periods into
- *      the middle of it until it fills the note. That sustains the vowel while
- *      leaving the opening and closing consonants intact, which is what keeps
- *      the words intelligible.
+ * That is the whole reason this file exists in its current form. The earlier
+ * version spoke words with espeak's formant synthesiser and resampled them onto
+ * the melody, which shifted the formants with the pitch and sounded mechanical.
  *
- * Whole words, not syllables: espeak pronounces "fireflies" correctly and
- * "fi", "re", "flies" incorrectly. A two-syllable word just gets two beats.
+ * Softening, because a lullaby has to be gentle and a baby is the audience:
+ *   - vibrato, ~5.2 Hz and ±22 cents, faded in only after the note has settled
+ *   - a small upward scoop into the start of each note
+ *   - a low-pass around 3.6 kHz to take the edge off the diphone joins
+ *   - breath noise shaped by the amplitude envelope
+ *   - a quiet, slightly late, slightly detuned second voice for warmth
+ *   - slow attack and release, so nothing clicks
  *
- * It is robotic. It is meant to be — it is a temp vocal so the tune and the
- * words are audible before you commit to a real Suno take.
+ * It is still a TEMP VOCAL — good enough to hear the tune and the words, not a
+ * substitute for a real take.
  */
 
 const fs = require('fs');
@@ -33,276 +30,260 @@ const { execFileSync } = require('child_process');
 
 const SR_OUT = 44100;
 
-/* Empirical: the flatsing variant at -p 99 sits near 356 Hz, comfortably inside
-   this melody's range so the resample never shifts formants far. f5 is the
-   fallback when the variant cannot be installed — it sounds fine but its
-   intonation contour makes multi-syllable words sag. */
-const FLAT_VOICE = 'en-us+flatsing';
-const FALLBACK_VOICE = 'en-us+f5';
-
-/**
- * The monotone variant lives in this repo so the result is reproducible rather
- * than depending on a hand-edited system file. Copy it into espeak's data
- * directory if it is not already there.
- */
-function installFlatVoice() {
-  try {
-    const ver = execFileSync('espeak-ng', ['--version'], { encoding: 'utf8' });
-    const mDir = ver.match(/Data at:\s*(\S+)/);
-    if (!mDir) return false;
-    const dest = path.join(mDir[1], 'voices', '!v', 'flatsing');
-    if (fs.existsSync(dest)) return true;
-    const src = path.join(__dirname, 'espeak', 'flatsing');
-    if (!fs.existsSync(src)) return false;
-    fs.mkdirSync(path.dirname(dest), { recursive: true });
-    fs.copyFileSync(src, dest);
-    return true;
-  } catch { return false; }
-}
-
 const NOTE_HZ = {
   C3:130.81, D3:146.83, E3:164.81, F3:174.61, G3:196.00, A3:220.00, B3:246.94,
   C4:261.63, D4:293.66, E4:329.63, F4:349.23, G4:392.00, A4:440.00, B4:493.88,
   C5:523.25, D5:587.33, E5:659.25, F5:698.46, G5:783.99, A5:880.00,
 };
 
+/* ---------- environment probing ---------- */
+
 function hasEspeak() {
   try { execFileSync('espeak-ng', ['--version'], { stdio: 'ignore' }); return true; }
   catch { return false; }
 }
 
-/* ---------- wav in ---------- */
+/** the MBROLA binary plus at least one installed voice */
+function findMbrola(prefer = ['us1', 'us2', 'en1']) {
+  for (const bin of ['/usr/bin/mbrola', '/usr/local/bin/mbrola']) {
+    if (!fs.existsSync(bin)) continue;
+    for (const root of ['/usr/share/mbrola', '/usr/local/share/mbrola']) {
+      for (const v of prefer) {
+        const db = path.join(root, v, v);
+        if (fs.existsSync(db)) return { bin, voice: v, db };
+      }
+    }
+  }
+  return null;
+}
+
+/* ---------- wav ---------- */
 
 function readWav(file) {
   const b = fs.readFileSync(file);
-  let pos = 12, sr = 0, off = 0, len = 0;
+  let pos = 12, sr = 0, off = 0, len = 0, bits = 16;
   while (pos < b.length - 8) {
     const id = b.toString('ascii', pos, pos + 4);
     const sz = b.readUInt32LE(pos + 4);
-    if (id === 'fmt ') sr = b.readUInt32LE(pos + 12);
+    if (id === 'fmt ') { sr = b.readUInt32LE(pos + 12); bits = b.readUInt16LE(pos + 22); }
     if (id === 'data') { off = pos + 8; len = sz; break; }
     pos += 8 + sz + (sz % 2);
   }
-  const n = len / 2;
+  const step = Math.max(1, bits / 8);
+  const n = Math.floor(len / step);
   const x = new Float32Array(n);
-  for (let i = 0; i < n; i++) x[i] = b.readInt16LE(off + i * 2) / 32768;
+  for (let i = 0; i < n; i++) x[i] = b.readInt16LE(off + i * step) / 32768;
   return { x, sr };
 }
 
-/* ---------- analysis ---------- */
-
-/** trim leading/trailing near-silence */
-function trim(x, th = 0.008) {
-  let a = 0, b = x.length - 1;
-  while (a < x.length && Math.abs(x[a]) < th) a++;
-  while (b > a && Math.abs(x[b]) < th) b--;
-  return x.subarray(Math.max(0, a - 240), Math.min(x.length, b + 240));
-}
-
-/**
- * F0 of the highest-energy window, by normalised autocorrelation.
- *
- * Accurate to ~0.1 cents against synthetic tones, but only because of the two
- * corrections below — without them it reported 392 Hz as 98 Hz.
- */
-function detectF0(x, sr) {
-  const W = Math.min(2048, x.length - 1);
-  let bi = 0, best = -1;
-  for (let w = 0; w + W * 2 < x.length; w += 256) {
-    let e = 0;
-    for (let i = 0; i < W; i++) e += x[w + i] * x[w + i];
-    if (e > best) { best = e; bi = w; }
-  }
-  const lo = Math.floor(sr / 600), hi = Math.floor(sr / 70);
-  const corr = new Float64Array(hi + 2);
-  let top = lo, bv = -1, last = lo;
-  for (let lag = lo; lag < hi; lag++) {
-    if (bi + W + lag >= x.length) break;
-    let s = 0, n1 = 0, n2 = 0;
-    for (let i = 0; i < W; i++) {
-      s += x[bi + i] * x[bi + i + lag];
-      n1 += x[bi + i] ** 2; n2 += x[bi + i + lag] ** 2;
-    }
-    corr[lag] = s / Math.sqrt(n1 * n2 + 1e-9);
-    last = lag;
-    if (corr[lag] > bv) { bv = corr[lag]; top = lag; }
-  }
-
-  // A periodic signal correlates just as well at 2T, 3T, ... as at T, so the
-  // raw argmax lands on an arbitrary multiple and reports a sub-octave (392 Hz
-  // came back as 98). Take the SHORTEST lag that is both a local peak and
-  // nearly as good as the best — that is the true fundamental.
-  let bl = top;
-  const thresh = bv * 0.90;
-  for (let lag = lo + 1; lag < last; lag++) {
-    if (corr[lag] >= thresh && corr[lag] > corr[lag - 1] && corr[lag] >= corr[lag + 1]) {
-      bl = lag;
-      break;
-    }
-  }
-
-  // Integer lags quantise badly up here: at 350 Hz one lag step is ~2.8 Hz,
-  // which is nearly 30 cents. Interpolate the correlation peak parabolically.
-  let lag = bl;
-  const a = corr[bl - 1], b = corr[bl], c = corr[bl + 1];
-  const den = a - 2 * b + c;
-  if (bl > lo && bl < hi - 1 && Math.abs(den) > 1e-12) {
-    const d = 0.5 * (a - c) / den;
-    if (Math.abs(d) < 1) lag = bl + d;
-  }
-  return { f0: sr / lag, corr: bv };
-}
-
-/** index of the peak-energy point, in samples */
-function peakIndex(x, win) {
-  let best = -1, bi = Math.floor(x.length / 3);
-  for (let w = 0; w + win < x.length; w += 64) {
-    let e = 0;
-    for (let i = 0; i < win; i++) e += x[w + i] * x[w + i];
-    if (e > best) { best = e; bi = w; }
-  }
-  return bi;
-}
-
-/* ---------- resample + sustain ---------- */
-
-/** out[m] = x[m*step], linear interpolation */
-function resample(x, step) {
-  const n = Math.floor((x.length - 1) / step);
+/** sample-rate conversion only — this does NOT change pitch */
+function toOutRate(x, srIn) {
+  if (!srIn || srIn === SR_OUT) return x;
+  const ratio = srIn / SR_OUT;
+  const n = Math.floor((x.length - 1) / ratio);
   const y = new Float32Array(n);
   for (let m = 0; m < n; m++) {
-    const p = m * step, i = Math.floor(p), f = p - i;
+    const p = m * ratio, i = Math.floor(p), f = p - i;
     y[m] = x[i] * (1 - f) + x[i + 1] * f;
   }
   return y;
 }
 
-/** concatenate segments with equal-power crossfades */
-function spliceSegments(segs, xf) {
-  let total = segs.reduce((a, s) => a + s.length, 0) - xf * (segs.length - 1);
-  const out = new Float32Array(Math.max(0, total));
-  let w = 0;
-  for (let s = 0; s < segs.length; s++) {
-    const seg = segs[s];
-    const start = s === 0 ? 0 : xf;
-    if (s > 0) {
-      for (let i = 0; i < xf && w - xf + i < out.length; i++) {
-        const u = i / xf;
-        const a = Math.cos(u * Math.PI / 2), b = Math.sin(u * Math.PI / 2);
-        const j = w - xf + i;
-        out[j] = out[j] * a + seg[i] * b;
-      }
-    }
-    for (let i = start; i < seg.length; i++) {
-      if (w < out.length) out[w++] = seg[i];
+/* ---------- shaping ---------- */
+
+let _seed = 987654321;
+function rnd() {
+  _seed = (_seed * 1664525 + 1013904223) >>> 0;
+  return _seed / 4294967296 * 2 - 1;
+}
+
+function lowpass(x, hz) {
+  const a = Math.exp(-2 * Math.PI * hz / SR_OUT);
+  const y = new Float32Array(x.length);
+  let s = 0;
+  for (let i = 0; i < x.length; i++) { s = x[i] * (1 - a) + s * a; y[i] = s; }
+  return y;
+}
+
+/** amplitude envelope follower — used to shape the breath layer */
+function envelope(x, tau = 0.02) {
+  const a = Math.exp(-1 / (tau * SR_OUT));
+  const e = new Float32Array(x.length);
+  let s = 0;
+  for (let i = 0; i < x.length; i++) {
+    const v = Math.abs(x[i]);
+    s = v > s ? v : v * (1 - a) + s * a;
+    e[i] = s;
+  }
+  return e;
+}
+
+function soften(x, { lp = 3600, breath = 0.05, atk = 0.05, rel = 0.14, warmth = 0.32 } = {}) {
+  let y = lowpass(x, lp);
+
+  // breath: noise riding the amplitude envelope, so it only appears in the tone
+  if (breath > 0) {
+    const env = envelope(y);
+    let hp = 0, prev = 0;
+    const a = Math.exp(-2 * Math.PI * 1400 / SR_OUT);
+    for (let i = 0; i < y.length; i++) {
+      const nz = rnd();
+      hp = a * (hp + nz - prev); prev = nz;
+      y[i] += hp * env[i] * breath;
     }
   }
-  return out;
+
+  // warmth: a quiet, slightly late, slightly detuned copy of the voice
+  if (warmth > 0) {
+    const delay = Math.floor(0.014 * SR_OUT);
+    const detune = 1.004;
+    const z = new Float32Array(y.length);
+    for (let i = 0; i < y.length; i++) {
+      const p = i * detune, j = Math.floor(p), f = p - j;
+      if (j + 1 < y.length) z[i] = y[j] * (1 - f) + y[j + 1] * f;
+    }
+    for (let i = delay; i < y.length; i++) y[i] += z[i - delay] * warmth;
+  }
+
+  // slow, click-free ends
+  const aN = Math.max(1, Math.floor(atk * SR_OUT));
+  const rN = Math.max(1, Math.floor(rel * SR_OUT));
+  for (let i = 0; i < y.length; i++) {
+    let g = 1;
+    if (i < aN) g *= Math.sin((i / aN) * Math.PI / 2) ** 2;
+    const k = y.length - 1 - i;
+    if (k < rN) g *= Math.sin((k / rN) * Math.PI / 2) ** 2;
+    y[i] *= g;
+  }
+  return y;
+}
+
+/* ---------- phonemes -> a sung note ---------- */
+
+/** espeak's phoneme script for one word: [{ph, ms, voiced}] */
+function phonemeScript(word, mbVoice) {
+  const clean = word.replace(/[^A-Za-z0-9']/g, '');
+  const out = execFileSync('espeak-ng',
+    ['-v', `mb-${mbVoice}`, '-q', '--pho', '-s', '150', clean],
+    { encoding: 'utf8' });
+  const rows = [];
+  for (const line of out.split('\n')) {
+    const t = line.trim();
+    if (!t) continue;
+    const parts = t.split(/\s+/);
+    const ph = parts[0];
+    const ms = Number(parts[1]);
+    if (!ph || !Number.isFinite(ms)) continue;
+    if (ph === '_') continue;                     // drop espeak's own silences
+    rows.push({ ph, ms, voiced: parts.length > 2 });
+  }
+  return rows;
 }
 
 /**
- * Stretch a resampled word to `targetN` samples by repeating whole
- * pitch-periods from its loudest region — the vowel — leaving the consonants
- * at each end untouched.
+ * A .pho script for one sung note: our durations, our pitch.
+ *
+ * Extra time is given to the voiced phonemes only — the vowels carry the
+ * sustain while the consonants keep their natural length, which is what keeps
+ * a stretched word intelligible instead of smeared.
  */
-function sustainTo(y, targetN, freq, spliceAt = null) {
-  if (y.length >= targetN) {
-    const out = y.slice(0, targetN);
-    const fade = Math.min(Math.floor(0.05 * SR_OUT), Math.floor(out.length / 4));
-    for (let i = 0; i < fade; i++) out[out.length - 1 - i] *= i / fade;
-    return out;
-  }
-  const period = SR_OUT / freq;
-  const loopLen = Math.max(2, Math.round(6 * period));
-  const xf = Math.max(1, Math.round(period));
+function buildPho(rows, freq, durSec, opt = {}) {
+  const { vibRate = 5.2, vibCents = 22, vibDelay = 0.28, scoopCents = 45, fill = 0.94 } = opt;
+  const targetMs = durSec * 1000 * fill;
+  const natural = rows.reduce((a, r) => a + r.ms, 0) || 1;
 
-  let pk = spliceAt !== null ? Math.round(spliceAt)
-                             : peakIndex(y, Math.min(loopLen, y.length - 1));
-  pk = Math.max(0, Math.min(pk, y.length - loopLen - 1));
-  if (pk <= 0 || pk + loopLen >= y.length) {
-    // too short to splice — just pad with a fade
-    const out = new Float32Array(targetN);
-    out.set(y.subarray(0, Math.min(y.length, targetN)));
-    return out;
+  const vTotal = rows.reduce((a, r) => a + (r.voiced ? r.ms : 0), 0);
+  const dur = rows.map(r => r.ms);
+
+  if (targetMs > natural && vTotal > 0) {
+    const extra = targetMs - natural;
+    rows.forEach((r, i) => { if (r.voiced) dur[i] += extra * (r.ms / vTotal); });
+  } else {
+    const k = targetMs / natural;
+    rows.forEach((r, i) => { dur[i] = Math.max(25, r.ms * k); });
   }
 
-  const head = y.subarray(0, pk + loopLen);
-  const loop = y.subarray(pk, pk + loopLen);
-  const tail = y.subarray(pk, y.length);
-
-  const need = targetN - (head.length + tail.length - xf);
-  const k = Math.max(0, Math.ceil(need / (loopLen - xf)));
-
-  const segs = [head];
-  for (let i = 0; i < k; i++) segs.push(loop);
-  segs.push(tail);
-  const out = spliceSegments(segs, xf);
-  return out.length > targetN ? out.slice(0, targetN) : out;
+  const lines = [];
+  let tMs = 0;
+  for (let i = 0; i < rows.length; i++) {
+    const d = Math.max(10, Math.round(dur[i]));
+    const steps = Math.max(2, Math.min(24, Math.round(d / 20)));   // a point every ~20ms
+    const pts = [];
+    for (let s = 0; s <= steps; s++) {
+      const pct = Math.round((s / steps) * 100);
+      const tSec = (tMs + d * s / steps) / 1000;
+      let cents = 0;
+      if (tSec < 0.07) cents -= scoopCents * (1 - tSec / 0.07);    // scoop into the note
+      const vg = Math.max(0, Math.min(1, (tSec - vibDelay) / 0.35));
+      cents += vibCents * vg * Math.sin(2 * Math.PI * vibRate * tSec);
+      pts.push(`${pct} ${Math.round(freq * Math.pow(2, cents / 1200))}`);
+    }
+    lines.push(`${rows[i].ph} ${d} ${pts.join(' ')}`);
+    tMs += d;
+  }
+  lines.push('_ 60');
+  return lines.join('\n') + '\n';
 }
 
 /* ---------- the singer ---------- */
 
-function makeSinger() {
+/**
+ * opts.transpose  semitones applied to every note (negative = warmer/lower)
+ * opts.voice      preferred MBROLA voice order, e.g. ['us1']
+ * opts.soften     overrides for the softening chain
+ */
+function makeSinger(opts = {}) {
   if (!hasEspeak()) return null;
-  const VOICE = installFlatVoice() ? FLAT_VOICE : FALLBACK_VOICE;
-  const ESPEAK_ARGS = ['-v', VOICE, '-p', '99', '-s', '80', '-a', '190', '-g', '0'];
+  const mb = findMbrola(opts.voice);
+  if (!mb) return null;
+
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sing-'));
   const cache = new Map();
+  const scripts = new Map();
+  const transpose = opts.transpose || 0;
 
-  function word(w) {
-    const key = w.toLowerCase();
-    if (cache.has(key)) return cache.get(key);
-    const clean = w.replace(/[^A-Za-z0-9']/g, '');
-    const file = path.join(dir, `${Buffer.from(key).toString('hex')}.wav`);
-    execFileSync('espeak-ng', [...ESPEAK_ARGS, '-w', file, clean], { stdio: 'ignore' });
-    const { x, sr } = readWav(file);
-    const t = trim(x);
-    // rough pass to size the window, then find the segment we will loop and
-    // measure the pitch of that segment specifically
-    const { f0, corr } = detectF0(t, sr);
-    const rec = { x: t, sr, f0: f0 > 0 ? f0 : 350, corr };
-    cache.set(key, rec);
-    return rec;
+  function script(word) {
+    const key = word.toLowerCase();
+    if (!scripts.has(key)) scripts.set(key, phonemeScript(word, mb.voice));
+    return scripts.get(key);
   }
 
-  /**
-   * Render one sung word into a stereo buffer.
-   *   buf   {n, L, R} target
-   *   at    start time, seconds
-   *   dur   note length, seconds
-   *   note  "G4" or a frequency in Hz
-   */
+  function render(word, freq, durSec) {
+    const key = `${word.toLowerCase()}|${freq.toFixed(2)}|${durSec.toFixed(3)}`;
+    if (cache.has(key)) return cache.get(key);
+
+    const rows = script(word);
+    let y = new Float32Array(0);
+    if (rows.length) {
+      const phoFile = path.join(dir, 'n.pho');
+      const wavFile = path.join(dir, 'n.wav');
+      fs.writeFileSync(phoFile, buildPho(rows, freq, durSec, opts.pho));
+      try {
+        execFileSync(mb.bin, ['-e', mb.db, phoFile, wavFile], { stdio: 'ignore' });
+        const { x, sr } = readWav(wavFile);
+        y = soften(toOutRate(x, sr), opts.soften);
+      } catch { /* leave silent; the caller reports it */ }
+    }
+    cache.set(key, y);
+    return y;
+  }
+
+  /** mix one sung word into a stereo buffer */
   function sing(buf, text, at, dur, note, gain = 1, pan = 0) {
-    const freq = typeof note === 'number' ? note : NOTE_HZ[note];
+    let freq = typeof note === 'number' ? note : NOTE_HZ[note];
     if (!freq) throw new Error(`unknown note: ${note}`);
+    freq *= Math.pow(2, transpose / 12);
 
-    const rec = word(text);
-    // step such that the resampled F0 lands on `freq` (see header comment)
-    const step = freq / (2 * rec.f0);
-    const y = resample(rec.x, step);
-
-    // leave a small breath at the end of the note so words do not run together
-    const targetN = Math.max(1, Math.floor(dur * 0.93 * SR_OUT));
-    const s = sustainTo(y, targetN, freq);
-
+    const s = render(text, freq, dur);
     const i0 = Math.floor(at * SR_OUT);
-    const atkN = Math.floor(0.012 * SR_OUT);          // short: preserve consonant attack
-    const relN = Math.floor(0.10 * SR_OUT);
     const gl = Math.cos((pan + 1) * Math.PI / 4), gr = Math.sin((pan + 1) * Math.PI / 4);
-
     for (let i = 0; i < s.length; i++) {
-      let e = 1;
-      if (i < atkN) e *= i / atkN;
-      if (i > s.length - relN) e *= (s.length - i) / relN;
-      // a little tremolo stops the spliced sustain sounding frozen
-      e *= 1 + 0.05 * Math.sin(2 * Math.PI * 4.6 * (i / SR_OUT));
-      const v = s[i] * e * gain;
       const j = i0 + i;
-      if (j >= 0 && j < buf.n) { buf.L[j] += v * gl; buf.R[j] += v * gr; }
+      if (j >= 0 && j < buf.n) { buf.L[j] += s[i] * gain * gl; buf.R[j] += s[i] * gain * gr; }
     }
   }
 
-  return { sing, word, NOTE_HZ, voice: VOICE };
+  return { sing, render, script, NOTE_HZ, backend: `mbrola:${mb.voice}`, transpose };
 }
 
-module.exports = { makeSinger, NOTE_HZ, hasEspeak };
+module.exports = { makeSinger, NOTE_HZ, hasEspeak, findMbrola };

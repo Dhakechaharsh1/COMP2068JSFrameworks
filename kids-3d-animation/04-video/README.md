@@ -44,9 +44,9 @@ npm run audio                    # both
 node tools/make-audio.js C-short # one
 ```
 
-**Prerequisite for the singing:** `espeak-ng` must be on `PATH`
-(`apt-get install espeak-ng`, `brew install espeak-ng`). Without it the lullaby still
-renders — just instrumental — and `make-audio.js` says so rather than failing.
+**Prerequisites for the singing:** `espeak-ng` **and** `mbrola` with a voice —
+`apt-get install espeak-ng mbrola mbrola-us1`. Without them the lullaby still renders,
+just instrumental, and `make-audio.js` says so rather than failing.
 
 **This is a temp track, not Suno.** It exists so the videos are not silent and so the
 comedy timing can actually be *heard*. Every hit sits on the same timeline the animation
@@ -70,35 +70,46 @@ What it actually does:
 
 ### The singing
 
-`tools/singer.js` turns words into sung notes. There is no neural model and no
-singing-synthesis engine — the method is old and simple:
+`tools/singer.js` synthesises the vocal. The method matters, because the first
+version of this sounded like a robot and a lullaby cannot.
 
-1. **espeak-ng speaks the word on a monotone.** This is the part that matters. espeak's
-   normal intonation falls about 240 cents across a word, so a two-syllable word sung as
-   one note sags badly on its second syllable. `tools/espeak/flatsing` is an `f5` variant
-   with `pitch 190 190` — equal base and range, i.e. no contour — which cuts that spread
-   to about 10 cents. The variant ships in this repo and `singer.js` installs it into
-   espeak's data directory on first run, so the result is reproducible rather than
-   depending on a hand-edited system file.
-2. **Measure the word's F0** by normalised autocorrelation, with two corrections that
-   turn out to be essential: a parabolic fit of the correlation peak (integer lags
-   quantise to ~30 cents up at 350 Hz) and a shortest-qualifying-peak rule (a periodic
-   signal correlates just as well at 2T and 3T, so the raw argmax reports sub-octaves —
-   392 Hz came back as 98).
-3. **Resample so that F0 lands on the melody note.** Formants come along for the ride,
-   which is why espeak is driven at ~356 Hz: near the middle of this melody, so the shift
-   stays small and the voice reads as a child rather than a chipmunk.
-4. **Splice extra pitch-periods into the middle of the word** until it fills the note.
-   That sustains the vowel while leaving the opening and closing consonants intact, which
-   is what keeps the words intelligible.
+**espeak-ng writes a phoneme script; MBROLA sings it.** espeak emits each word as a
+list of phonemes with durations and pitch targets. We rewrite those durations and
+pitches ourselves and hand the script to MBROLA, which renders it from **diphones
+recorded from a real speaker**. Because we author the pitch, each note is synthesised
+*at* pitch — there is no resampling, so no formant shift and no chipmunk effect, and
+MBROLA's internal PSOLA holds the timbre steady across the range.
 
-Whole words, not syllables — espeak pronounces "fireflies" correctly and "fi", "re",
-"flies" incorrectly. A two-syllable word simply gets two beats.
+The earlier approach — speak the word, measure its F0, resample it onto the note —
+dragged the formants along with the pitch. That is exactly what "mechanical" sounds
+like, and no amount of filtering fixes it.
 
-Measured over all 88 sung notes in the finished mix, the mean pitch error is **24 cents**.
+Extra time is given only to the **voiced** phonemes, so vowels carry the sustain while
+consonants keep their natural length. That is what stops a stretched word turning to
+mush.
 
-It is robotic, and it is meant to be: it is a temp vocal so the tune and the words are
-audible before you commit to a real Suno take.
+**Softening**, because the audience is a baby:
+
+| | |
+|---|---|
+| vibrato | ~5 Hz, ±20 cents, faded in only *after* the note settles |
+| scoop | a small pitch rise into the start of each note |
+| low-pass | ~3.2 kHz, to take the edge off the diphone joins |
+| breath | noise riding the amplitude envelope, so it lives inside the tone |
+| warmth | a quiet, slightly late, slightly detuned second voice |
+| envelope | 55 ms attack, 160 ms release — nothing clicks |
+
+Measured on the finished MP4, high-frequency energy in the chorus dropped from
+**0.086 to 0.035** — less than half the brightness of the first version. All 133 sung
+words are audible and pitch sits at a median 22 cents, much of which is the vibrato
+doing its job.
+
+The vocal stays in the written octave (C4–C5) rather than being transposed down. It sits
+clear above the pad and bass (C2–G3), so the words stay legible instead of muddying into
+the harmony — the warmth comes from the softening chain, not from going low.
+
+It is still a temp vocal: a synthetic voice, recognisably so. It exists so the tune, the
+words and the timing are audible before you pay for a real take.
 
 **The lyrics are the single source of truth.** `04-video/scenes/A-poem-lyrics.js` holds
 the line list, the note assignment and the rhythm, and it is loaded by both the browser

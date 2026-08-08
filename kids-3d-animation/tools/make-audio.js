@@ -291,7 +291,14 @@ function buildPoem() {
   }
 
   // ---- the vocal -----------------------------------------------------------
-  const singer = makeSinger();
+  // Kept in the written octave rather than dropped: C4-C5 sits clear above the
+  // pad and bass (C2-G3), so the words stay legible instead of muddying into
+  // the harmony. Warmth comes from the softening chain, not from going low.
+  const singer = makeSinger({
+    voice: ['us1'],
+    soften: { lp: 3200, breath: 0.06, atk: 0.055, rel: 0.16, warmth: 0.34 },
+    pho: { vibRate: 5.0, vibCents: 20, vibDelay: 0.30, scoopCents: 40 },
+  });
   if (singer) {
     for (const line of POEM.LINES) {
       const t0 = line.bar * BAR;
@@ -299,12 +306,12 @@ function buildPoem() {
       let beat = 0;
       for (const w of POEM.parseScore(line.sing)) {
         singer.sing(buf, w.word, t0 + beat * POEM.BEAT, w.beats * POEM.BEAT,
-                    w.note, 0.80 * vol, 0);
+                    w.note, 2.6 * vol, 0);
         beat += w.beats;
       }
     }
   } else {
-    console.warn('  (espeak-ng not found — rendering the lullaby instrumental)');
+    console.warn('  (espeak-ng + mbrola not found — rendering the lullaby instrumental)');
   }
 
   // a glockenspiel sparkle each time a firefly settles, matched to the picture
