@@ -4,17 +4,17 @@
 
 | File | | |
 |---|---|---|
-| `C-short.webm` | 1080×1920 · 24fps · 0:35 | *Zip Gets the Hiccups* — the full Short, animated |
-| `A-poem.webm` | 1920×1080 · 24fps · 2:35 | *Five Sleepy Fireflies* — the full poem, with on-screen lyrics |
+| `C-short.mp4` | 1080×1920 · 24fps · 0:35 · H.264 + AAC | *Zip Gets the Hiccups* — the full Short |
+| `A-poem.mp4` | 1920×1080 · 24fps · 2:35 · H.264 + AAC | *Five Sleepy Fireflies* — the full poem, with on-screen lyrics |
+
+**Both have sound.** It is synthesised in code by `tools/make-audio.js` — see below.
 
 **Be clear about what these are.** They are real, finished, uploadable animation —
 but they are **vector/2.5D animation written in SVG and JavaScript**, not the
 Nano-Banana-plus-Veo 3D renders that `00-system/style-guide.md` specifies. I can run a
-browser and an encoder here; I cannot run Suno, Nano Banana, Kling or Veo, so the
-3D version has to be produced by you with those tools, using the prompt packets in
-`02-episodes/`.
-
-They are also **silent**. Suno provides the audio — see each episode's `suno.md`.
+browser, a synthesiser and an encoder here; I cannot run Suno, Nano Banana, Kling or
+Veo, so the 3D version has to be produced by you with those tools, using the prompt
+packets in `02-episodes/`.
 
 ## So what are they good for?
 
@@ -32,7 +32,43 @@ More than you'd think, and it's worth being concrete:
 4. **They pin the pacing.** The single hardest thing to get right in kids content is
    rhythm, and it is the one thing generative video gives you no control over.
 
-## How they're built
+## The audio
+
+`tools/make-audio.js` is a small additive/subtractive synthesiser written from scratch —
+no dependencies, no samples, about 400 lines. It writes 44.1 kHz stereo WAVs into
+`audio/`, which the renderer muxes in.
+
+```bash
+npm run audio                    # both
+node tools/make-audio.js C-short # one
+```
+
+**This is a temp track, not Suno.** It exists so the videos are not silent and so the
+comedy timing can actually be *heard*. Every hit sits on the same timeline the animation
+uses, which means when you drop the real Suno tracks in, the sync points are already
+known.
+
+What it actually does:
+
+- **C-short** — a 124 BPM comedy funk bed: kick/snare/hats, a plucked bass line in E
+  minor, clav stabs on the offbeats. Each hiccup is the documented three-part stack —
+  intake gasp just before the beat, *boing* exactly on the downbeat, then the result
+  (whoosh, splash, rocket, bonk, ping). Every hiccup lands on a downbeat. The windows at
+  0:02.6–0:05 and 0:16.3–0:18.6 are **silent on purpose**; that silence under Bibi's
+  deadpan and under the empty frame is doing more work than any of the boings.
+- **A-poem** — a 60 BPM instrumental lullaby: music-box melody over a soft pad, plucked
+  bass, and a glockenspiel sparkle each time a firefly settles (0:41, 1:05, 1:29, 1:45).
+  One bar per on-screen lyric line, so the music is locked to the captions. Chord cycle
+  is C–C–Am–Am–F–F–G–G. The whole piece descends continuously from about 1:45 to the
+  end, so the last thirty seconds are measurably quieter than the first thirty.
+
+The WAVs are gitignored — they regenerate in about 16 seconds, and the MP4s already
+carry the audio.
+
+**Replacing it with Suno:** generate from the episode's `suno.md`, drop the file in as
+`audio/<scene>.wav`, and re-render. Nothing else changes.
+
+## How the picture is built
 
 Each scene is one HTML file in `scenes/` that exposes two globals:
 
@@ -51,29 +87,21 @@ straight into ffmpeg. Nothing touches the disk in between.
 
 ```bash
 cd kids-3d-animation
-node tools/render-video.js C-short              # full quality
-node tools/render-video.js A-poem
-node tools/render-video.js C-short --scale 0.35 --fps 12   # ~15s preview
+npm run video:short             # audio + full render, ~85s
+npm run video:poem              # ~17min
+npm run video:preview           # ~16s low-res check
+node tools/render-video.js C-short --no-audio
 ```
 
-**Why WebM and not MP4:** the ffmpeg bundled with Playwright is a stripped build — it
-encodes VP8/WebM only, and decodes MJPEG but not PNG. Hence JPEG frames in, WebM out.
-YouTube accepts WebM directly. If you want MP4, re-encode with a full ffmpeg:
+**Encoder:** output is H.264/AAC `.mp4` whenever an ffmpeg with `libx264` is on the
+system — the `ffmpeg-static` devDependency provides one. If only the stripped ffmpeg
+bundled inside Playwright is available it falls back to VP8/WebM, because that build has
+no H.264 encoder at all. The script detects this and tells you which path it took.
 
-```bash
-ffmpeg -i C-short.webm -c:v libx264 -crf 18 -pix_fmt yuv420p C-short.mp4
-```
-
-## Adding sound
-
-The videos are cut to the timings in the episode packets, so the audio drops straight on:
-
-- **C-short** — generate the funk loop from `02-episodes/day-001/C-short/suno.md`, then
-  place the hiccup SFX stack on the beats at 0:01, 0:11, 0:16, 0:23 and 0:31. Every
-  hiccup in the animation is already on those frames.
-- **A-poem** — generate the lullaby from `02-episodes/day-001/A-poem/suno.md`. The
-  on-screen lyric cues are timed to the written verse structure, so if Suno's phrasing
-  differs, nudge the `CUES` array in `scenes/A-poem.html` and re-render.
+**A Playwright gotcha worth knowing:** a project-local and a global Playwright can both
+be visible at once, each pinned to a different Chromium build. `loadPlaywright()` picks
+the first one whose browser binary actually exists on disk — otherwise you get a launch
+error that reads like a missing dependency but is really a version mismatch.
 
 ## What's not here
 

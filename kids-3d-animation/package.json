@@ -6,12 +6,14 @@
   "scripts": {
     "thumbs": "node tools/render-thumbnails.js",
     "new-day": "node tools/new-day.js",
+    "audio": "node tools/make-audio.js",
     "video": "node tools/render-video.js",
-    "video:short": "node tools/render-video.js C-short",
-    "video:poem": "node tools/render-video.js A-poem",
+    "video:short": "node tools/make-audio.js C-short && node tools/render-video.js C-short",
+    "video:poem": "node tools/make-audio.js A-poem && node tools/render-video.js A-poem",
     "video:preview": "node tools/render-video.js C-short --scale 0.35 --fps 12"
   },
   "devDependencies": {
+    "ffmpeg-static": "^5.3.0",
     "playwright": "^1.56.1"
   }
 }

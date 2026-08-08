@@ -90,22 +90,31 @@ and prompt scaffolds already filled in.
 03-thumbnails/ templates/  three HTML thumbnail layouts (16:9 ×2, 9:16 ×1)
                rendered/   output PNGs — guide, overlay and 120px blur test
 04-video/      scenes/     code-driven animation scenes
+               audio/      synthesised soundtracks (gitignored, regenerate in ~16s)
                rendered/   **playable video files**
-tools/         new-day.js, render-thumbnails.js, render-video.js
+tools/         new-day.js, render-thumbnails.js, render-video.js, make-audio.js
 ```
 
 **Playable video is in [`04-video/`](04-video/).** Two of the three Day 001 videos are
-rendered and watchable right now — the Short and the poem, complete and timed:
+rendered and watchable right now — **H.264 MP4, with sound**:
+
+| | | |
+|---|---|---|
+| `C-short.mp4` | 1080×1920 · 0:35 | *Zip Gets the Hiccups* |
+| `A-poem.mp4` | 1920×1080 · 2:35 | *Five Sleepy Fireflies*, with on-screen lyrics |
 
 ```bash
-cd kids-3d-animation && npm run video:short   # 0:35, 1080x1920
-                        npm run video:poem    # 2:35, 1920x1080
+cd kids-3d-animation && npm run video:short   # audio + render, ~85s
+                        npm run video:poem    # ~17min
 ```
 
 Read [`04-video/README.md`](04-video/README.md) before you judge them: they are real,
 finished, uploadable animation, but they are **vector/2.5D built in SVG and JavaScript,
-not the Nano Banana + Veo 3D renders this system specifies**, and they are silent. Their
-main job is to be the animatic — every beat and hold is already timed, so when you
+not the Nano Banana + Veo 3D renders this system specifies**. The soundtracks are
+synthesised in code by `tools/make-audio.js` — a temp track, not Suno; drop a Suno WAV
+into `04-video/audio/` and re-render to replace it.
+
+Their main job is to be the animatic — every beat and hold is already timed, so when you
 generate the 3D shots you are matching a rhythm that has been proven rather than
 discovering it in the edit.
 
