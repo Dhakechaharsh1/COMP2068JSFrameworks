@@ -1,0 +1,105 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Thumbnail B — Story</title>
+<style>
+  /* Layout B — "cinematic left-third"  ·  1280 x 720
+     The shipping version of this thumbnail has NO TEXT.
+     ?mode=guide      composition guide + placeholder background
+     ?mode=overlay    transparent; empty unless &text=1
+     &text=1          renders the "WON'T LIGHT" A/B variant
+     &bg=<path>       use your own image as the background                      */
+
+  html, body { margin: 0; padding: 0; }
+  body {
+    width: 1280px; height: 720px; position: relative; overflow: hidden;
+    font-family: "Baloo 2", "Fredoka", "Nunito", "DejaVu Sans", sans-serif;
+  }
+
+  #bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+  body.guide #bg {
+    background-image:
+      radial-gradient(circle 200px at 78% 44%, rgba(255,186,84,.85) 0%, rgba(255,150,40,.25) 38%, transparent 68%),
+      radial-gradient(ellipse 80% 70% at 30% 55%, #17384A 0%, transparent 70%),
+      linear-gradient(160deg, #071522 0%, #0E2739 55%, #123047 100%);
+  }
+  body.guide #vig {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 75% 75% at 50% 50%, transparent 40%, rgba(0,0,0,.72) 100%);
+  }
+
+  /* --- optional A/B text ------------------------------------------------- */
+  .title {
+    position: absolute; left: 96px; top: 528px;
+    font-size: 78px; font-weight: 800; letter-spacing: 1px; color: #FFE9B8;
+    -webkit-text-stroke: 8px #0E1B2A; paint-order: stroke fill;
+    text-shadow: 0 6px 14px rgba(0,0,0,.55);
+    display: none;
+  }
+  body.withtext .title { display: block; }
+
+  /* --- guide chrome ------------------------------------------------------ */
+  .g { display: none; }
+  body.guide .g { display: block; }
+
+  .third   { position: absolute; top: 0; bottom: 0; width: 2px;
+             background: rgba(255,255,255,.28); }
+  .subject { position: absolute; left: 130px; top: 300px; transform: translateY(-50%);
+             width: 330px; height: 380px; border-radius: 22px;
+             border: 3px dashed rgba(255,255,255,.55);
+             display: flex; align-items: center; justify-content: center;
+             font: 600 21px/1.55 "DejaVu Sans", sans-serif; color: rgba(255,255,255,.8);
+             text-align: center; padding: 0 12px; }
+  .lantern { position: absolute; left: 880px; top: 250px;
+             width: 190px; height: 190px; border-radius: 50%;
+             border: 3px dashed rgba(255,210,130,.7);
+             display: flex; align-items: center; justify-content: center;
+             font: 600 19px/1.5 "DejaVu Sans", sans-serif; color: rgba(255,225,170,.9);
+             text-align: center; }
+  .gap     { position: absolute; left: 470px; right: 400px; top: 296px; height: 2px;
+             border-top: 2px dotted rgba(255,255,255,.5); }
+  .gaplbl  { position: absolute; left: 486px; top: 236px; width: 360px; text-align: center;
+             font: italic 600 19px/1.4 "DejaVu Sans", sans-serif; color: rgba(255,255,255,.72); }
+  .fg      { position: absolute; left: 0; right: 0; bottom: 0; height: 130px;
+             background: linear-gradient(to top, rgba(0,0,0,.85), transparent); }
+
+  .safe    { position: absolute; left: 90px; top: 50px; width: 1100px; height: 620px;
+             border: 2px dashed rgba(80,255,180,.85); }
+  .dead    { position: absolute; right: 0; bottom: 0; width: 210px; height: 84px;
+             background: rgba(255,60,60,.30); border: 2px solid rgba(255,60,60,.9); }
+  .lbl     { position: absolute; font: 600 17px/1 "DejaVu Sans", sans-serif; color: #fff;
+             background: rgba(0,0,0,.62); padding: 5px 9px; border-radius: 4px; }
+</style>
+</head>
+<body>
+  <div id="bg"></div>
+  <div class="g" id="vig"></div>
+  <div class="g fg"></div>
+
+  <div class="g third" style="left:426px"></div>
+  <div class="g third" style="left:853px"></div>
+
+  <div class="g subject">MOMO<br>left third · 3/4 view<br>looking RIGHT<br>hopeful, uncertain<br><br><b>NOT lit warm</b><br>cool blue only</div>
+  <div class="g lantern">LANTERN<br>warm amber<br>blooming</div>
+  <div class="g gap"></div>
+  <div class="g gaplbl">the gap between them is the story</div>
+
+  <div class="title">WON'T LIGHT</div>
+
+  <div class="g safe"></div>
+  <div class="g lbl" style="left:96px; top:56px">safe zone 1100 × 620</div>
+  <div class="g dead"></div>
+  <div class="g lbl" style="right:14px; bottom:92px">duration stamp — keep empty</div>
+  <div class="g lbl" style="left:14px; top:14px">Layout B — no text in the shipping version</div>
+
+<script>
+  const p = new URLSearchParams(location.search);
+  const cls = [p.get('mode') === 'overlay' ? 'overlay' : 'guide'];
+  if (p.get('text') === '1') cls.push('withtext');
+  document.body.className = cls.join(' ');
+  const bg = p.get('bg');
+  if (bg) document.getElementById('bg').style.backgroundImage = 'url("' + bg + '")';
+</script>
+</body>
+</html>
