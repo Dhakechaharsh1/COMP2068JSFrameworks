@@ -296,8 +296,14 @@ function buildPoem() {
   // the harmony. Warmth comes from the softening chain, not from going low.
   const singer = makeSinger({
     voice: ['us1'],
-    soften: { lp: 3200, breath: 0.06, atk: 0.055, rel: 0.16, warmth: 0.34 },
-    pho: { vibRate: 5.0, vibCents: 20, vibDelay: 0.30, scoopCents: 40 },
+    // us1 is an adult female; 1.25 lifts the formants into a child's range
+    // without pushing far enough to sound like a cartoon squeak
+    formantShift: 1.25,
+    // Soft is not the same as dull. Keep the top end — sibilants and stops live
+    // at 4-8 kHz and they are what make the words clear — and take the edge off
+    // by dipping the 2-4.5 kHz harshness band instead.
+    soften: { lp: 7500, deharsh: 0.45, breath: 0.05, atk: 0.06, rel: 0.17, warmth: 0.14 },
+    pho: { vibRate: 4.8, vibCents: 18, vibDelay: 0.32, scoopCents: 35 },
   });
   if (singer) {
     for (const line of POEM.LINES) {

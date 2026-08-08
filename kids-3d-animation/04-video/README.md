@@ -77,12 +77,25 @@ version of this sounded like a robot and a lullaby cannot.
 list of phonemes with durations and pitch targets. We rewrite those durations and
 pitches ourselves and hand the script to MBROLA, which renders it from **diphones
 recorded from a real speaker**. Because we author the pitch, each note is synthesised
-*at* pitch — there is no resampling, so no formant shift and no chipmunk effect, and
-MBROLA's internal PSOLA holds the timbre steady across the range.
+*at* pitch — MBROLA's PSOLA holds the formants steady while the pitch moves, which was
+verified directly: a sustained /I/ keeps F2 at ~1800 Hz whether it is asked for 150 Hz
+or 500 Hz.
 
-The earlier approach — speak the word, measure its F0, resample it onto the note —
-dragged the formants along with the pitch. That is exactly what "mechanical" sounds
-like, and no amount of filtering fixes it.
+The first version instead spoke the word and *resampled* it onto the note, which drags
+the formants along with the pitch. That is what "mechanical" sounds like, and filtering
+does not fix it.
+
+**A child voice, built rather than found.** MBROLA ships no child voice — the English
+set is one adult female (us1) and two adult males. A child's voice is not just higher
+pitch, it is higher *formants*, because the vocal tract is shorter. So one is
+constructed: MBROLA is asked to sing at `freq / k` for `duration * k`, and the render is
+then resampled by `k`. Resampling multiplies pitch, formants and rate all by `k`, so
+pitch lands back on the note and duration comes back to length, leaving only the
+formants shifted. `k = 1.25` puts us1 into a child's range without tipping into squeak.
+
+One subtlety this introduces: the `.pho` script lives in the pre-resample time base,
+which is `k` times slower, so vibrato rate and onset are pre-divided by `k` — otherwise
+the wobble comes out 25% too fast.
 
 Extra time is given only to the **voiced** phonemes, so vowels carry the sustain while
 consonants keep their natural length. That is what stops a stretched word turning to
@@ -92,17 +105,23 @@ mush.
 
 | | |
 |---|---|
-| vibrato | ~5 Hz, ±20 cents, faded in only *after* the note settles |
+| vibrato | ~4.8 Hz, ±18 cents, faded in only *after* the note settles |
 | scoop | a small pitch rise into the start of each note |
-| low-pass | ~3.2 kHz, to take the edge off the diphone joins |
+| harshness dip | −45% across 2–4.5 kHz |
+| top end | kept to 7.5 kHz — **not** low-passed away |
 | breath | noise riding the amplitude envelope, so it lives inside the tone |
 | warmth | a quiet, slightly late, slightly detuned second voice |
-| envelope | 55 ms attack, 160 ms release — nothing clicks |
+| envelope | 60 ms attack, 170 ms release — nothing clicks |
 
-Measured on the finished MP4, high-frequency energy in the chorus dropped from
-**0.086 to 0.035** — less than half the brightness of the first version. All 133 sung
-words are audible and pitch sits at a median 22 cents, much of which is the vibrato
-doing its job.
+**Soft is not the same as dull.** An earlier pass low-passed the voice at 3.2 kHz, which
+measured softer but killed the consonants — sibilants and stops live at 4–8 kHz and they
+are what make words *clear*. The harshness that needed removing sits at 2–4.5 kHz, so
+that band is dipped and the top is left alone.
+
+Measured on the finished MP4: high-frequency energy in the chorus is **0.046**, against
+**0.086** for the original resampled vocal (and 0.035 for the over-filtered pass that
+lost its consonants). All 133 sung words are audible, and pitch sits at a median
+**16 cents** — much of which is the vibrato doing its job.
 
 The vocal stays in the written octave (C4–C5) rather than being transposed down. It sits
 clear above the pad and bass (C2–G3), so the words stay legible instead of muddying into

@@ -11,10 +11,18 @@
  * version spoke words with espeak's formant synthesiser and resampled them onto
  * the melody, which shifted the formants with the pitch and sounded mechanical.
  *
+ * CHILD VOICE. MBROLA ships no child voice, so one is built from the adult
+ * female us1 by shifting the formants up without moving the pitch: MBROLA is
+ * asked to sing at freq/k for duration*k, then the render is resampled by k.
+ * Resampling multiplies pitch, formants and rate all by k, so the pitch lands
+ * back on the note, the duration comes back to length, and only the formants
+ * are left shifted — which is exactly what a shorter vocal tract does.
+ *
  * Softening, because a lullaby has to be gentle and a baby is the audience:
  *   - vibrato, ~5.2 Hz and ±22 cents, faded in only after the note has settled
  *   - a small upward scoop into the start of each note
- *   - a low-pass around 3.6 kHz to take the edge off the diphone joins
+ *   - a dip in the 2-4.5 kHz harshness band, rather than a blanket low-pass —
+ *     chopping the top off makes it dull, not soft, and murders the consonants
  *   - breath noise shaped by the amplitude envelope
  *   - a quiet, slightly late, slightly detuned second voice for warmth
  *   - slow attack and release, so nothing clicks
@@ -118,8 +126,27 @@ function envelope(x, tau = 0.02) {
   return e;
 }
 
-function soften(x, { lp = 3600, breath = 0.05, atk = 0.05, rel = 0.14, warmth = 0.32 } = {}) {
+/** resample by k: pitch, formants and rate all scale by k, duration by 1/k */
+function resampleBy(x, k) {
+  if (Math.abs(k - 1) < 1e-6) return x;
+  const n = Math.floor((x.length - 1) / k);
+  const y = new Float32Array(n);
+  for (let m = 0; m < n; m++) {
+    const p = m * k, i = Math.floor(p), f = p - i;
+    y[m] = x[i] * (1 - f) + x[i + 1] * f;
+  }
+  return y;
+}
+
+function soften(x, { lp = 7000, deharsh = 0.45, breath = 0.045, atk = 0.05,
+                     rel = 0.14, warmth = 0.16 } = {}) {
+  // Keep the top end — sibilants and stops live at 4-8 kHz and they are what
+  // make words CLEAR. Soften by removing the 2-4.5 kHz harshness band instead.
   let y = lowpass(x, lp);
+  if (deharsh > 0) {
+    const a = lowpass(y, 4500), b = lowpass(y, 2000);
+    for (let i = 0; i < y.length; i++) y[i] -= deharsh * (a[i] - b[i]);
+  }
 
   // breath: noise riding the amplitude envelope, so it only appears in the tone
   if (breath > 0) {
@@ -228,7 +255,9 @@ function buildPho(rows, freq, durSec, opt = {}) {
 /* ---------- the singer ---------- */
 
 /**
- * opts.transpose  semitones applied to every note (negative = warmer/lower)
+ * opts.transpose     semitones applied to every note (negative = warmer/lower)
+ * opts.formantShift  >1 raises the formants without moving the pitch; ~1.3
+ *                    turns the adult female us1 into a child
  * opts.voice      preferred MBROLA voice order, e.g. ['us1']
  * opts.soften     overrides for the softening chain
  */
@@ -241,6 +270,7 @@ function makeSinger(opts = {}) {
   const cache = new Map();
   const scripts = new Map();
   const transpose = opts.transpose || 0;
+  const fShift = opts.formantShift || 1;      // >1 = smaller/younger vocal tract
 
   function script(word) {
     const key = word.toLowerCase();
@@ -257,11 +287,20 @@ function makeSinger(opts = {}) {
     if (rows.length) {
       const phoFile = path.join(dir, 'n.pho');
       const wavFile = path.join(dir, 'n.wav');
-      fs.writeFileSync(phoFile, buildPho(rows, freq, durSec, opts.pho));
+      // Sing low and long, then resample up: pitch and duration come back to
+      // target, formants stay shifted -> child-sized vocal tract.
+      // The .pho lives in the pre-resample time base, which is fShift times
+      // slower, so vibrato rate and onset have to be pre-compensated or the
+      // wobble comes out fShift times too fast.
+      const pho = Object.assign({}, opts.pho);
+      pho.vibRate = (pho.vibRate ?? 5.2) / fShift;
+      pho.vibDelay = (pho.vibDelay ?? 0.28) * fShift;
+      pho.scoopCents = pho.scoopCents ?? 45;
+      fs.writeFileSync(phoFile, buildPho(rows, freq / fShift, durSec * fShift, pho));
       try {
         execFileSync(mb.bin, ['-e', mb.db, phoFile, wavFile], { stdio: 'ignore' });
         const { x, sr } = readWav(wavFile);
-        y = soften(toOutRate(x, sr), opts.soften);
+        y = soften(resampleBy(toOutRate(x, sr), fShift), opts.soften);
       } catch { /* leave silent; the caller reports it */ }
     }
     cache.set(key, y);
@@ -283,7 +322,8 @@ function makeSinger(opts = {}) {
     }
   }
 
-  return { sing, render, script, NOTE_HZ, backend: `mbrola:${mb.voice}`, transpose };
+  return { sing, render, script, NOTE_HZ,
+           backend: `mbrola:${mb.voice}`, transpose, formantShift: fShift };
 }
 
 module.exports = { makeSinger, NOTE_HZ, hasEspeak, findMbrola };
