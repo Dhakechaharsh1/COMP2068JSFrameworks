@@ -21,6 +21,8 @@
 
 const fs = require('fs');
 const path = require('path');
+const { makeSinger } = require('./singer');
+const POEM = require('../04-video/scenes/A-poem-lyrics.js');
 
 const SR = 44100;
 
@@ -228,7 +230,7 @@ const N = { C3:130.81, D3:146.83, E3:164.81, F3:174.61, G3:196.00, A3:220.00, B3
 
 function buildPoem() {
   const DUR = 155;
-  const BAR = 4.0;                 // 60 BPM, 4/4 — one bar per on-screen lyric line
+  const BAR = POEM.BAR;            // 4.0s — 60 BPM, 4/4, one bar per lyric line
   const buf = makeBuf(DUR + 3);
 
   // C  C  Am Am F  F  G  G   (8 bars = 32s)
@@ -239,11 +241,12 @@ function buildPoem() {
     { pad: [N.A2, N.C3, N.E3], bass: N.A2 },
     { pad: [N.F2, N.A2, N.C3], bass: N.F2 },
     { pad: [N.F2, N.A2, N.C3], bass: N.F2 },
-    { pad: [N.G2, N.B3/2, N.D3], bass: N.G2 },
-    { pad: [N.G2, N.B3/2, N.D3], bass: N.G2 },
+    { pad: [N.G2, N.D3, N.G3], bass: N.G2 },
+    { pad: [N.G2, N.D3, N.G3], bass: N.G2 },
   ];
 
-  // 8-bar music-box melody, [beat, note] per bar
+  // 8-bar music-box phrase — played only where the voice is NOT singing, so
+  // the two never fight for the same melodic space
   const MEL = [
     [[0, N.G4], [1, N.G4], [2, N.A4], [3, N.G4]],
     [[0, N.E4], [2, N.D4]],
@@ -255,45 +258,66 @@ function buildPoem() {
     [[0, N.C4]],
   ];
 
+  const sungBars = new Set(POEM.LINES.map(l => l.bar));
+
+  /** the piece fades up, then descends continuously to the end */
+  const volAt = t => {
+    const fadeIn = Math.min(1, t / 7);
+    const fadeOut = t < 105 ? 1 : Math.max(0.10, 1 - (t - 105) / 58);
+    return fadeIn * fadeOut;
+  };
+
   const nBars = Math.ceil(DUR / BAR);
   for (let b = 0; b < nBars; b++) {
     const t0 = b * BAR;
     if (t0 > DUR) break;
     const ch = PROG[b % 8];
-    const mel = MEL[b % 8];
-
-    // the whole piece fades up, then descends continuously to the end —
-    // the last 30 seconds must be measurably quieter than the first 30
-    const fadeIn = Math.min(1, t0 / 7);
-    const fadeOut = t0 < 105 ? 1 : Math.max(0.10, 1 - (t0 - 105) / 58);
-    const vol = fadeIn * fadeOut;
+    const vol = volAt(t0);
     if (vol <= 0.001) continue;
 
-    // pad
-    ch.pad.forEach((f, i) => note(buf, t0, BAR + 0.8, f, 0.16 * vol, 'pad', (i - 1) * 0.45));
-    // bass, once a bar
-    note(buf, t0, 2.6, ch.bass, 0.30 * vol, 'bass', 0);
-    // music box melody
-    for (const [beat, f] of mel) {
-      note(buf, t0 + beat, 2.2, f, 0.34 * vol, 'bell', (beat - 1.5) * 0.16);
-      // a soft octave shimmer above, quieter
-      note(buf, t0 + beat, 1.6, f * 2, 0.07 * vol, 'bell', -(beat - 1.5) * 0.16);
+    // pad and bass carry the harmony under everything
+    ch.pad.forEach((f, i) => note(buf, t0, BAR + 0.8, f, 0.15 * vol, 'pad', (i - 1) * 0.45));
+    note(buf, t0, 2.6, ch.bass, 0.26 * vol, 'bass', 0);
+
+    if (sungBars.has(b)) {
+      // under the voice: just a soft chime on beat 1, no competing tune
+      note(buf, t0, 2.0, ch.pad[2] * 2, 0.09 * vol, 'bell', -0.35);
+    } else {
+      for (const [beat, f] of MEL[b % 8]) {
+        note(buf, t0 + beat, 2.2, f, 0.30 * vol, 'bell', (beat - 1.5) * 0.16);
+        note(buf, t0 + beat, 1.6, f * 2, 0.06 * vol, 'bell', -(beat - 1.5) * 0.16);
+      }
     }
   }
 
-  // a glockenspiel sparkle each time a firefly settles
-  [41, 65, 89, 105].forEach((t, i) => {
-    note(buf, t, 2.4, N.C6, 0.22, 'bell', i % 2 ? 0.5 : -0.5);
-    note(buf, t + 0.18, 2.0, N.G5, 0.15, 'bell', i % 2 ? -0.4 : 0.4);
+  // ---- the vocal -----------------------------------------------------------
+  const singer = makeSinger();
+  if (singer) {
+    for (const line of POEM.LINES) {
+      const t0 = line.bar * BAR;
+      const vol = volAt(t0);
+      let beat = 0;
+      for (const w of POEM.parseScore(line.sing)) {
+        singer.sing(buf, w.word, t0 + beat * POEM.BEAT, w.beats * POEM.BEAT,
+                    w.note, 0.80 * vol, 0);
+        beat += w.beats;
+      }
+    }
+  } else {
+    console.warn('  (espeak-ng not found — rendering the lullaby instrumental)');
+  }
+
+  // a glockenspiel sparkle each time a firefly settles, matched to the picture
+  [41, 68, 98, 114].forEach((t, i) => {
+    note(buf, t, 2.4, N.C6, 0.20, 'bell', i % 2 ? 0.5 : -0.5);
+    note(buf, t + 0.18, 2.0, N.G5, 0.13, 'bell', i % 2 ? -0.4 : 0.4);
   });
 
-  // Nana Moon rises 2:02 -> 2:22: a slow rising arpeggio, then her hum
-  [[122, N.C4], [124.5, N.E4], [127, N.G4], [129.5, N.C5], [132, N.E5]].forEach(([t, f]) =>
-    note(buf, t, 3.4, f, 0.16, 'bell', 0));
-  [[136, N.C4], [140, N.E4], [144, N.G4], [148, N.E4], [151, N.C4]].forEach(([t, f]) =>
-    note(buf, t, 4.6, f, 0.13, 'hum', 0));
+  // Nana Moon rises: a slow arpeggio under the last verse
+  [[118, N.C4], [121, N.E4], [124, N.G4], [127, N.C5], [130, N.E5]].forEach(([t, f]) =>
+    note(buf, t, 3.4, f, 0.14, 'bell', 0));
 
-  reverb(buf, { mix: 0.30, fb: 0.40 });
+  reverb(buf, { mix: 0.26, fb: 0.36 });
   return { buf, name: 'A-poem' };
 }
 

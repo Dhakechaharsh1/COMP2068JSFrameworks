@@ -160,6 +160,7 @@
   <text id="lyric" x="960" y="1000" opacity="0"></text>
 </svg>
 
+<script src="A-poem-lyrics.js"></script>
 <script>
 /* ============================================================================
    "Five Sleepy Fireflies" — 2:35, 1920x1080, Plush Hollow style.
@@ -195,13 +196,13 @@ const mix = (a,b,u) => {
    two-year-old reads "extinguished" as loss. */
 const FLIES = [
   { x0: 620,  y0: 470, ax: 130, ay: 74, fx: 0.055, fy: 0.083, ph: 0.0,
-    settle: 41,  rest: [430, 812],  hideTo: 0.30 },   // into the daisy cup
+    settle: 41,  rest: [430, 812],  hideTo: 0.30 },   // 'One found a daisy cup'
   { x0: 880,  y0: 400, ax: 165, ay: 60, fx: 0.043, fy: 0.071, ph: 1.7,
-    settle: 65,  rest: [760, 905],  hideTo: 0.42 },   // onto the lily pad
+    settle: 68,  rest: [760, 905],  hideTo: 0.42 },   // 'One rode a lily pad'
   { x0: 1120, y0: 445, ax: 120, ay: 88, fx: 0.061, fy: 0.052, ph: 3.1,
-    settle: 89,  rest: [1105, 800], hideTo: 0.34 },   // under the leaf
+    settle: 98,  rest: [1105, 800], hideTo: 0.34 },   // 'One hid beneath a leaf'
   { x0: 1330, y0: 385, ax: 145, ay: 66, fx: 0.038, fy: 0.094, ph: 4.6,
-    settle: 105, rest: [1604, 701], hideTo: 0.85 },   // onto Momo's ear
+    settle: 114, rest: [1604, 701], hideTo: 0.85 },   // 'One landed on Momo's ear'
   { x0: 980,  y0: 520, ax: 190, ay: 96, fx: 0.049, fy: 0.063, ph: 5.9,
     settle: 999, rest: [0,0],       hideTo: 1 },      // the last one — rises
 ];
@@ -245,26 +246,10 @@ const FLIES = [
   $('stars').innerHTML = s;
 })();
 
-/* ---------- lyrics ---------- */
-const CUES = [
-  [8,  'Hush, hush, Puddleberry.'], [14, 'The lanterns are low.'], [20, ''],
-  [24, 'Five sleepy fireflies,'],   [28, 'Blinking in the blue.'],
-  [32, 'One found a daisy cup'],    [36, 'And curled up in the dew.'],
-  [41, 'Blink, blink, little light,'], [45, 'Blink, blink, goodnight.'],
-  [49, 'Blink, blink, little light,'], [53, 'Sleep till morning bright.'],
-  [57, 'Four sleepy fireflies,'],   [61, 'Drifting past the stream.'],
-  [65, 'One rode a lily pad'],      [69, 'And floated into dream.'],
-  [73, 'Blink, blink, little light,'], [77, 'Blink, blink, goodnight.'],
-  [81, 'Blink, blink, little light,'], [85, 'Sleep till morning bright.'],
-  [89, 'Three sleepy fireflies,'],  [93, 'Wobbling round the tree.'],
-  [97, 'One hid beneath a leaf,'],  [101,'As quiet as can be.'],
-  [105,'Two sleepy fireflies,'],    [109,'Yawning in the air.'],
-  [113,"One landed on Momo's ear"], [117,'And fell asleep right there.'],
-  [121,'Blink, blink, little light,'], [125,'Blink, blink, goodnight.'],
-  [129,'One sleepy firefly,'],      [133,'The very last to glow.'],
-  [137,'She looked up at the moon'],[141,'And whispered, soft and low...'],
-  [146,'Goodnight, goodnight.'],    [151,''],
-];
+/* ---------- lyrics ----------
+   Shared with tools/make-audio.js via A-poem-lyrics.js, so the captions and the
+   sung vocal can never drift apart. One bar (4s) per line. */
+const CUES = POEM_LYRICS.cues();
 
 function currentCue(t){
   let cue = ['', 0];
@@ -308,11 +293,11 @@ function setTime(t){
   /* ---- resting places fade in just before they're needed ---- */
   $('props').setAttribute('opacity', 1);
   $('daisy').setAttribute('opacity', seg(t, 30, 38));
-  $('lily').setAttribute('opacity',  seg(t, 54, 62));
-  $('leaf').setAttribute('opacity',  seg(t, 78, 86));
+  $('lily').setAttribute('opacity',  seg(t, 58, 66));
+  $('leaf').setAttribute('opacity',  seg(t, 88, 96));
 
   /* the daisy closes over firefly 1 */
-  const close = seg(t, 43, 50);
+  const close = seg(t, 42, 49);
   $('daisy').setAttribute('transform', `translate(430,812) scale(${lerp(1,0.55,close)},${lerp(1,0.7,close)})`);
 
   /* the lily pad drifts left to right — the Trickle always flows that way */
@@ -327,7 +312,7 @@ function setTime(t){
 
     if (i === 4) {
       // the last firefly: rises alone to the moon, then stays as a tiny light
-      const rise = seg(t, 129, 143);
+      const rise = seg(t, 134, 148);
       y = lerp(y, 560, easeOut(rise));
       x = lerp(x, 1210, easeOut(rise));
       scale = lerp(1, 0.5, rise);
@@ -351,20 +336,20 @@ function setTime(t){
 
   /* ---- Momo ---- */
   // he watches the fireflies, then his eyes close for good around the last chorus
-  const sleep = seg(t, 118, 133);
+  const sleep = seg(t, 116, 130);
   $('momoLids').setAttribute('opacity', sleep);
   $('momoEyes').setAttribute('opacity', 1 - sleep);
   $('momoMouth').setAttribute('d', sleep > 0.5 ? 'M-12,-34 q12,7 24,0' : 'M-14,-34 q14,10 28,0');
   // the ear twitches once when firefly 4 lands on it, then stills
-  const twitch = pulse(seg(t, 105, 106.6));
+  const twitch = pulse(seg(t, 114, 115.6));
   $('earR').setAttribute('transform', `rotate(${(twitch*13).toFixed(2)} 72 -140)`);
   // gentle breathing
   const br = 1 + Math.sin(t*0.9)*0.012;
   $('momo').setAttribute('transform', `translate(1548,846) scale(${(0.78*br).toFixed(4)},${(0.78/br).toFixed(4)})`);
 
   /* ---- Nana Moon ---- */
-  const rise = easeOut(seg(t, 122, 142));
-  $('moon').setAttribute('opacity', seg(t, 120, 132));
+  const rise = easeOut(seg(t, 116, 136));
+  $('moon').setAttribute('opacity', seg(t, 114, 126));
   $('moon').setAttribute('transform',
     `translate(${lerp(1080, 1020, rise).toFixed(1)},${lerp(1180, 268, rise).toFixed(1)})`);
   // she hums — the mouth moves very slightly
